@@ -1,0 +1,2421 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NutriVision TR" />
+  <meta name="theme-color" content="#090d16" />
+  <title>NutriVision TR — Akıllı Yemek Hacmi ve Kalori Takip</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+          },
+          colors: {
+            oled: {
+              bg: '#090d16',
+              card: '#111827',
+              elevated: '#1a2333',
+              border: '#243044'
+            },
+            emeraldAccent: {
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669'
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* iPhone 16e Safe Area & Native Feel Optimizations */
+    :root {
+      --sat: env(safe-area-inset-top, 20px);
+      --sab: env(safe-area-inset-bottom, 20px);
+    }
+
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overscroll-behavior-y: none;
+      padding-top: var(--sat);
+      padding-bottom: calc(84px + var(--sab));
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    .bottom-nav {
+      padding-bottom: max(10px, var(--sab));
+    }
+
+    /* Hide scrollbars for horizontal category pills */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Custom Range Slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.25);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 22px;
+      width: 22px;
+      border-radius: 50%;
+      background: #10b981;
+      margin-top: -7px;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.45);
+      border: 2px solid #ffffff;
+    }
+
+    /* Virtual Plate Ring Pulse Animation */
+    @keyframes platePulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.92; }
+      50% { transform: translate(-50%, -50%) scale(1.015); opacity: 1; }
+    }
+    .plate-guide-ring {
+      animation: platePulse 3s infinite ease-in-out;
+    }
+
+    /* Scanner Laser Line Animation */
+    @keyframes scanLine {
+      0% { top: 10%; opacity: 0.2; }
+      50% { top: 88%; opacity: 0.95; }
+      100% { top: 10%; opacity: 0.2; }
+    }
+    .scanner-beam {
+      animation: scanLine 2.2s infinite ease-in-out;
+    }
+
+    /* Smooth Tab Fade */
+    .tab-view {
+      animation: fadeIn 0.2s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-oled-bg dark:text-slate-100 min-h-screen select-none">
+
+  <!-- ==================== TOP APP BAR ==================== -->
+  <header class="sticky top-0 z-30 backdrop-blur-xl bg-white/85 dark:bg-oled-bg/85 border-b border-slate-200/80 dark:border-oled-border px-4 py-3">
+    <div class="max-w-lg mx-auto flex items-center justify-between gap-2">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white font-extrabold text-lg">
+          N
+        </div>
+        <div>
+          <h1 class="text-base font-extrabold tracking-tight leading-none">NutriVision <span class="text-emerald-500">TR</span></h1>
+          <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Hacim & Kalori Asistanı</span>
+        </div>
+      </div>
+
+      <!-- Network Status Pill -->
+      <div id="networkStatusBadge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+        <span id="networkDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="networkText">Çevrimiçi AI Aktif</span>
+      </div>
+    </div>
+
+    <!-- Date Selector Bar (Shown primarily on Dashboard) -->
+    <div id="dateSelectorBar" class="max-w-lg mx-auto mt-2.5 flex items-center justify-between bg-slate-100 dark:bg-oled-card rounded-2xl p-1 border border-slate-200/60 dark:border-oled-border">
+      <button onclick="changeDate(-1)" class="p-2 rounded-xl hover:bg-white dark:hover:bg-oled-elevated active:scale-95 transition" aria-label="Önceki Gün">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <button onclick="resetToToday()" class="flex items-center gap-2 px-3 py-1 rounded-xl text-xs font-bold tracking-wide">
+        <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span id="currentDateLabel">Bugün</span>
+      </button>
+      <button onclick="changeDate(1)" class="p-2 rounded-xl hover:bg-white dark:hover:bg-oled-elevated active:scale-95 transition" aria-label="Sonraki Gün">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT CONTAINER ==================== -->
+  <main class="max-w-lg mx-auto px-4 pt-3 space-y-4">
+
+    <!-- ============================================================ -->
+    <!-- VIEW 1: ANA EKRAN (DASHBOARD)                                -->
+    <!-- ============================================================ -->
+    <section id="view-dashboard" class="tab-view space-y-4">
+
+      <!-- Samsung Health Style Summary Card -->
+      <div class="rounded-3xl bg-white dark:bg-oled-card border border-slate-200/80 dark:border-oled-border p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Günlük Enerji Özeti</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Hedef: <span id="dashTargetKcal" class="font-bold text-slate-700 dark:text-slate-200">2200</span> kcal</p>
+          </div>
+          <button onclick="switchTab('scanner')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-bold active:scale-95 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+            AI Tabak Tara
+          </button>
+        </div>
+
+        <!-- Circular Calorie Ring + Stats -->
+        <div class="flex items-center justify-between gap-4 my-2">
+          <!-- Left Stat: Consumed -->
+          <div class="text-center flex-1">
+            <p id="dashConsumedKcal" class="text-xl font-extrabold text-slate-900 dark:text-white">0</p>
+            <p class="text-[11px] font-medium text-slate-400">Alınan (kcal)</p>
+          </div>
+
+          <!-- Center SVG Progress Ring -->
+          <div class="relative w-36 h-36 flex items-center justify-center shrink-0">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" stroke-width="11" class="text-slate-200 dark:text-oled-elevated" />
+              <circle id="calorieRingCircle" cx="60" cy="60" r="50" fill="none" stroke="url(#kcalGrad)" stroke-width="11" stroke-linecap="round"
+                stroke-dasharray="314.16" stroke-dashoffset="314.16" class="transition-all duration-500 ease-out" />
+              <defs>
+                <linearGradient id="kcalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#34d399" />
+                  <stop offset="100%" stop-color="#06b6d4" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span id="dashRemainingKcal" class="text-2xl font-extrabold tracking-tight">2200</span>
+              <span id="dashRemainingLabel" class="text-[11px] font-semibold text-emerald-500">Kalan kcal</span>
+            </div>
+          </div>
+
+          <!-- Right Stat: Volume Total -->
+          <div class="text-center flex-1">
+            <p id="dashTotalGrams" class="text-xl font-extrabold text-slate-900 dark:text-white">0g</p>
+            <p class="text-[11px] font-medium text-slate-400">Toplam Miktar</p>
+          </div>
+        </div>
+
+        <!-- 3 Macro Progress Bars -->
+        <div class="grid grid-cols-3 gap-3 pt-3 mt-2 border-t border-slate-100 dark:border-oled-border">
+          <!-- Carbs -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-[11px] font-semibold">
+              <span class="text-sky-500">Karb</span>
+              <span class="text-slate-500 dark:text-slate-400"><span id="dashCarbVal">0</span>/<span id="dashCarbTarget">250</span>g</span>
+            </div>
+            <div class="h-2 rounded-full bg-slate-100 dark:bg-oled-elevated overflow-hidden">
+              <div id="dashCarbBar" class="h-full bg-sky-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+          <!-- Protein -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-[11px] font-semibold">
+              <span class="text-emerald-500">Protein</span>
+              <span class="text-slate-500 dark:text-slate-400"><span id="dashProtVal">0</span>/<span id="dashProtTarget">140</span>g</span>
+            </div>
+            <div class="h-2 rounded-full bg-slate-100 dark:bg-oled-elevated overflow-hidden">
+              <div id="dashProtBar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+          <!-- Fat -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-[11px] font-semibold">
+              <span class="text-amber-500">Yağ</span>
+              <span class="text-slate-500 dark:text-slate-400"><span id="dashFatVal">0</span>/<span id="dashFatTarget">70</span>g</span>
+            </div>
+            <div class="h-2 rounded-full bg-slate-100 dark:bg-oled-elevated overflow-hidden">
+              <div id="dashFatBar" class="h-full bg-amber-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Water Intake Tracker Module -->
+      <div class="rounded-3xl bg-white dark:bg-oled-card border border-slate-200/80 dark:border-oled-border p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-cyan-500/15 text-cyan-500 flex items-center justify-center">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold">Su Tüketimi</h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400"><span id="waterCurrentText" class="font-bold text-cyan-500">0</span> / <span id="waterTargetText">2500</span> ml</p>
+            </div>
+          </div>
+          <span id="waterPercentBadge" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-cyan-500/15 text-cyan-500">%0</span>
+        </div>
+
+        <!-- Visual Water Cups / Wave Bar -->
+        <div class="h-3 rounded-full bg-slate-100 dark:bg-oled-elevated overflow-hidden mb-3">
+          <div id="waterProgressBar" class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <!-- Quick Add Water Buttons -->
+        <div class="grid grid-cols-4 gap-2">
+          <button onclick="addWater(200)" class="py-2 px-1 rounded-2xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-xs font-bold active:scale-95 transition">
+            +200 ml<span class="block text-[10px] font-normal opacity-80">Bardak</span>
+          </button>
+          <button onclick="addWater(330)" class="py-2 px-1 rounded-2xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-xs font-bold active:scale-95 transition">
+            +330 ml<span class="block text-[10px] font-normal opacity-80">Kutu</span>
+          </button>
+          <button onclick="addWater(500)" class="py-2 px-1 rounded-2xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-xs font-bold active:scale-95 transition">
+            +500 ml<span class="block text-[10px] font-normal opacity-80">Şişe</span>
+          </button>
+          <button onclick="addWater(-200)" class="py-2 px-1 rounded-2xl bg-slate-100 dark:bg-oled-elevated text-slate-600 dark:text-slate-300 text-xs font-bold active:scale-95 transition">
+            -200 ml<span class="block text-[10px] font-normal opacity-80">Geri Al</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Meals Container (Kahvaltı, Öğle, Akşam, Ara Öğün) -->
+      <div id="mealsContainer" class="space-y-3"></div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- VIEW 2: KAMERA & YAPAY ZEKA HACİM ANALİZİ (SCANNER)          -->
+    <!-- ============================================================ -->
+    <section id="view-scanner" class="tab-view hidden space-y-4">
+      <div class="rounded-3xl bg-white dark:bg-oled-card border border-slate-200/80 dark:border-oled-border p-4 shadow-sm space-y-3.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-extrabold">AI Yemek Hacmi & Kalori Tarayıcı</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Tabağı sanal halkaya hizalayın ve çekin</p>
+          </div>
+          <span class="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-500/15 text-emerald-500">Sanal Kalibrasyon</span>
+        </div>
+
+        <!-- Plate Type Selector Pills -->
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">1. Sanal Tabak / Kase Çapı Seçin</label>
+          <div class="grid grid-cols-2 gap-2" id="plateSelectorGrid">
+            <button type="button" onclick="selectPlateType('small', 18, 'Küçük Tabak (18 cm)')" data-plate="small"
+              class="plate-btn p-2.5 rounded-2xl border text-left transition border-slate-200 dark:border-oled-border bg-slate-50 dark:bg-oled-elevated">
+              <div class="text-xs font-bold">Küçük Tabak</div>
+              <div class="text-[11px] text-slate-400">Çap: 18 cm (Pasta/Salata)</div>
+            </button>
+            <button type="button" onclick="selectPlateType('standard', 24, 'Standart Tabak (24 cm)')" data-plate="standard"
+              class="plate-btn p-2.5 rounded-2xl border text-left transition border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <div class="text-xs font-bold">Standart Tabak ✓</div>
+              <div class="text-[11px] opacity-80">Çap: 24 cm (Servis Tabağı)</div>
+            </button>
+            <button type="button" onclick="selectPlateType('large', 28, 'Büyük Tabak (28 cm)')" data-plate="large"
+              class="plate-btn p-2.5 rounded-2xl border text-left transition border-slate-200 dark:border-oled-border bg-slate-50 dark:bg-oled-elevated">
+              <div class="text-xs font-bold">Büyük Tabak</div>
+              <div class="text-[11px] text-slate-400">Çap: 28 cm (Geniş Tabak)</div>
+            </button>
+            <button type="button" onclick="selectPlateType('bowl', 15, 'Çorba Kasesi (15 cm)')" data-plate="bowl"
+              class="plate-btn p-2.5 rounded-2xl border text-left transition border-slate-200 dark:border-oled-border bg-slate-50 dark:bg-oled-elevated">
+              <div class="text-xs font-bold">Çorba Kasesi</div>
+              <div class="text-[11px] text-slate-400">Çap: 15 cm (Derin Kase)</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Camera / Image Preview Box with Virtual Plate Ring -->
+        <div class="relative w-full aspect-[4/3] rounded-3xl overflow-hidden bg-slate-950 border-2 border-slate-800 flex items-center justify-center">
+          <!-- Live Video Element -->
+          <video id="cameraVideo" autoplay playsinline muted class="w-full h-full object-cover hidden"></video>
+          <!-- Captured / Uploaded Image Preview -->
+          <img id="capturedImagePreview" alt="Yemek Önizleme" class="w-full h-full object-cover hidden" />
+          <!-- Hidden Canvas for Frame Capture -->
+          <canvas id="captureCanvas" class="hidden"></canvas>
+
+          <!-- Placeholder State when Camera is not started -->
+          <div id="cameraPlaceholder" class="text-center p-6 space-y-3 z-10">
+            <div class="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+            </div>
+            <p class="text-xs text-slate-300 max-w-xs mx-auto leading-relaxed">
+              Canlı kamerayı açabilir veya iPhone kamerası / fotoğraf arşivinizden tabak fotoğrafı seçebilirsiniz.
+            </p>
+          </div>
+
+          <!-- Virtual Plate Alignment Overlay Ring -->
+          <div id="virtualPlateOverlay" class="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div id="virtualPlateRing" style="width: 68%; aspect-ratio: 1/1;"
+              class="plate-guide-ring absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dashed border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.32)] flex flex-col items-center justify-between py-2">
+              <span id="ringLabelTop" class="px-2 py-0.5 rounded-full bg-black/70 text-emerald-300 text-[10px] font-bold backdrop-blur-sm">
+                Standart Tabak • 24 cm
+              </span>
+              <span class="px-2 py-0.5 rounded-full bg-black/60 text-white/80 text-[10px]">
+                Tabağı çember içine hizalayın
+              </span>
+            </div>
+          </div>
+
+          <!-- AI Scanning Overlay Animation -->
+          <div id="aiScanningOverlay" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-4 text-center">
+            <div class="scanner-beam absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#34d399]"></div>
+            <div class="w-12 h-12 rounded-full border-4 border-emerald-500/30 border-t-emerald-400 animate-spin mb-3"></div>
+            <p class="text-sm font-bold text-white">Gemini Vision Analiz Ediyor...</p>
+            <p class="text-xs text-emerald-300 mt-1">Yemek türleri ayrıştırılıyor ve cm³ hacim hesaplanıyor</p>
+          </div>
+        </div>
+
+        <!-- Camera Action Controls -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="btnStartCamera" onclick="startLiveCamera()" class="py-3 px-3 rounded-2xl bg-slate-900 dark:bg-oled-elevated text-white text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition border border-slate-700">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <span id="btnCameraText">Canlı Kamera Aç</span>
+          </button>
+
+          <!-- Native iPhone Camera / Photo Picker -->
+          <label class="py-3 px-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition shadow-lg shadow-emerald-500/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <span>Fotoğraf Çek / Seç</span>
+            <input type="file" id="imageFileInput" accept="image/*" capture="environment" class="hidden" onchange="handleFileUpload(event)" />
+          </label>
+        </div>
+
+        <!-- Capture Frame Button (Visible only when Live Video is streaming) -->
+        <button id="btnCaptureFrame" onclick="captureFromVideo()" class="hidden w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-extrabold shadow-lg shadow-emerald-500/25 active:scale-95 transition">
+          📸 Fotoğrafı Yakala ve AI ile Analiz Et
+        </button>
+
+        <!-- Re-analyze button when image is loaded -->
+        <button id="btnReAnalyze" onclick="analyzeCurrentImage()" class="hidden w-full py-3 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold active:scale-95 transition">
+          🔄 Seçili Fotoğrafı Tekrar AI ile Analiz Et
+        </button>
+      </div>
+
+      <!-- AI ANALYSIS RESULTS CONTAINER -->
+      <div id="aiResultsSection" class="hidden rounded-3xl bg-white dark:bg-oled-card border border-emerald-500/40 p-4 shadow-md space-y-3.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-extrabold text-emerald-500">Tespit Edilen Yemekler & Hacimler</h3>
+            <p id="aiPlateSummary" class="text-xs text-slate-500 dark:text-slate-400">Gramajı kaydırıcı ile hassas ayarlayabilirsiniz</p>
+          </div>
+          <span id="aiTotalDetectedKcal" class="px-3 py-1 rounded-2xl bg-emerald-500 text-white text-xs font-extrabold">0 kcal</span>
+        </div>
+
+        <!-- Detected Items List -->
+        <div id="detectedItemsList" class="space-y-3"></div>
+
+        <!-- Target Meal Selector & Add All Button -->
+        <div class="pt-3 border-t border-slate-100 dark:border-oled-border space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <label class="text-xs font-bold text-slate-500 dark:text-slate-400">Eklenecek Öğün:</label>
+            <select id="aiTargetMealSelect" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-oled-elevated text-xs font-bold border border-slate-200 dark:border-oled-border">
+              <option value="Kahvaltı">Kahvaltı</option>
+              <option value="Öğle Yemeği" selected>Öğle Yemeği</option>
+              <option value="Akşam Yemeği">Akşam Yemeği</option>
+              <option value="Ara Öğün">Ara Öğün</option>
+            </select>
+          </div>
+          <button onclick="saveDetectedFoodsToLog()" class="w-full py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-extrabold shadow-lg shadow-emerald-500/25 active:scale-95 transition">
+            ✓ Tümünü Günlüğe Ekle
+          </button>
+        </div>
+      </div>
+
+      <!-- OFFLINE / MANUAL VISUAL PORTION CALCULATOR -->
+      <div class="rounded-3xl bg-white dark:bg-oled-card border border-slate-200/80 dark:border-oled-border p-4 shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold">Çevrimdışı Görsel Porsiyon Hesaplayıcı</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">İnternet yokken tabak doluluğuna göre hacim hesaplayın</p>
+          </div>
+          <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-500/15 text-amber-500">Offline Hazır</span>
+        </div>
+
+        <div class="grid grid-cols-1 gap-2.5">
+          <select id="offlineCalcFoodSelect" onchange="recalcOfflinePortion()" class="w-full px-3 py-2.5 rounded-2xl bg-slate-100 dark:bg-oled-elevated text-xs font-semibold border border-slate-200 dark:border-oled-border"></select>
+
+          <div>
+            <div class="flex justify-between text-xs font-semibold mb-1.5">
+              <span class="text-slate-400">Tabak Doluluk Oranı:</span>
+              <span id="offlineFillLabel" class="text-emerald-500 font-bold">%50 (Yarım Tabak)</span>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+              <button type="button" onclick="setOfflineFill(25)" class="fill-btn py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-oled-elevated" data-fill="25">%25</button>
+              <button type="button" onclick="setOfflineFill(50)" class="fill-btn py-2 rounded-xl text-xs font-bold bg-emerald-500 text-white" data-fill="50">%50</button>
+              <button type="button" onclick="setOfflineFill(75)" class="fill-btn py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-oled-elevated" data-fill="75">%75</button>
+              <button type="button" onclick="setOfflineFill(100)" class="fill-btn py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-oled-elevated" data-fill="100">%100</button>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-2xl bg-slate-50 dark:bg-oled-elevated flex items-center justify-between text-xs">
+            <div>
+              <span class="text-slate-400 block">Tahmini Hacim & Gramaj</span>
+              <span id="offlineCalcVolWeight" class="font-extrabold text-sm">210 cm³ • 180 g</span>
+            </div>
+            <div class="text-right">
+              <span class="text-slate-400 block">Hesaplanan Enerji</span>
+              <span id="offlineCalcKcal" class="font-extrabold text-sm text-emerald-500">234 kcal</span>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <select id="offlineMealSelect" class="px-3 py-2.5 rounded-2xl bg-slate-100 dark:bg-oled-elevated text-xs font-bold border border-slate-200 dark:border-oled-border">
+              <option value="Kahvaltı">Kahvaltı</option>
+              <option value="Öğle Yemeği" selected>Öğle Yemeği</option>
+              <option value="Akşam Yemeği">Akşam Yemeği</option>
+              <option value="Ara Öğün">Ara Öğün</option>
+            </select>
+            <button onclick="addOfflineCalculatedFood()" class="flex-1 py-2.5 rounded-2xl bg-slate-900 dark:bg-emerald-500 text-white text-xs font-bold active:scale-95 transition">
+              + Öğüne Ekle
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- VIEW 3: KATEGORİZE MARKA BAZLI YİYECEK VERİTABANI (DATABASE)  -->
+    <!-- ============================================================ -->
+    <section id="view-database" class="tab-view hidden space-y-3.5">
+      <!-- Search & Custom Food Button -->
+      <div class="flex gap-2">
+        <div class="relative flex-1">
+          <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" id="foodSearchInput" oninput="renderFoodDatabase()" placeholder="Marka, yemek veya ürün ara (ör. Sütaş, Pilav)..."
+            class="w-full pl-10 pr-4 py-3 rounded-2xl bg-white dark:bg-oled-card border border-slate-200 dark:border-oled-border text-xs font-medium focus:outline-none focus:border-emerald-500" />
+        </div>
+        <button onclick="openCustomFoodModal()" class="px-3.5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-lg shadow-emerald-500/20 active:scale-95 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Yeni Ürün</span>
+        </button>
+      </div>
+
+      <!-- Horizontal Category Filter Pills -->
+      <div id="categoryPillsContainer" class="flex gap-2 overflow-x-auto no-scrollbar pb-1"></div>
+
+      <!-- Results Count -->
+      <div class="flex items-center justify-between px-1">
+        <span id="dbResultCount" class="text-xs font-semibold text-slate-500 dark:text-slate-400">0 ürün listeleniyor</span>
+        <span class="text-[11px] text-emerald-500 font-semibold">Çevrimdışı Veritabanı ✓</span>
+      </div>
+
+      <!-- Food Items List -->
+      <div id="foodDatabaseList" class="space-y-2.5"></div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- VIEW 4: İSTATİSTİKLER VE KİLO TAKİBİ (STATS)                 -->
+    <!-- ============================================================ -->
+    <section id="view-stats" class="tab-view hidden space-y-4">
+      <!-- 7-Day Calorie Bar Chart -->
+      <div class="rounded-3xl bg-white dark:bg-oled-card border border-slate-200/80 dark:border-oled-border p-4 shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-extrabold">Son 7 Günlük Kalori Analizi</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Günlük alım ve hedef karşılaştırması</p>
+          </div>
+          <span id="statsAvgKcal" class="px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-500 text-xs font-bold">Ort: 0 kcal</span>
+        </div>
+        <div class="w-full h-44">
+          <canvas id="weeklyCalorieCanvas" class="w-full h-full"></canvas>
+        </div>
+      </div>
+
+      <!-- Today's Macro Distribution Donut Chart -->
+      <div class="rounded-3xl bg-white dark:bg-oled-card border border-slate-200/80 dark:border-oled-border p-4 shadow-sm">
+        <h2 class="text-sm font-extrabold mb-3">Günlük Makro Dağılımı (Kalori Oranı)</h2>
+        <div class="flex items-center gap-4">
+          <div class="w-32 h-32 shrink-0">
+            <canvas id="macroDonutCanvas" class="w-full h-full"></canvas>
+          </div>
+          <div class="flex-1 space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2 font-semibold"><span class="w-3 h-3 rounded-full bg-sky-500"></span>Karbonhidrat</span>
+              <span id="statCarbPct" class="font-bold">%0 (0g)</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2 font-semibold"><span class="w-3 h-3 rounded-full bg-emerald-500"></span>Protein</span>
+              <span id="statProtPct" class="font-bold">%0 (0g)</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2 font-semibold"><span class="w-3 h-3 rounded-full bg-amber-500"></span>Yağ</span>
+              <span id="statFatPct" class="font-bold">%0 (0g)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weight Tracker Card -->
+      <div class="rounded-3xl bg-white dark:bg-oled-card border border-slate-200/80 dark:border-oled-border p-4 shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-extrabold">Kilo Takip Günlüğü</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Güncel: <span id="statsCurrentWeight" class="font-bold text-emerald-500">75.0 kg</span></p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <input type="number" step="0.1" id="newWeightInput" placeholder="74.5" class="w-20 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-oled-elevated text-xs font-bold border border-slate-200 dark:border-oled-border" />
+            <button onclick="logNewWeight()" class="px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold active:scale-95 transition">Kaydet</button>
+          </div>
+        </div>
+        <div class="w-full h-36">
+          <canvas id="weightChartCanvas" class="w-full h-full"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- VIEW 5: PROFİL, HEDEFLER VE AYARLAR (PROFILE)                -->
+    <!-- ============================================================ -->
+    <section id="view-profile" class="tab-view hidden space-y-4">
+      <!-- Mifflin-St Jeor Calculator -->
+      <div class="rounded-3xl bg-white dark:bg-oled-card border border-slate-200/80 dark:border-oled-border p-4 shadow-sm space-y-3.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-extrabold">Kişisel Profil & Hedef Hesaplayıcı</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Mifflin-St Jeor formülü ile otomatik kalori/makro hesabı</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Cinsiyet</label>
+            <select id="profGender" class="w-full px-3 py-2.5 rounded-2xl bg-slate-100 dark:bg-oled-elevated font-bold border border-slate-200 dark:border-oled-border">
+              <option value="male">Erkek</option>
+              <option value="female">Kadın</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Yaş</label>
+            <input type="number" id="profAge" value="30" class="w-full px-3 py-2.5 rounded-2xl bg-slate-100 dark:bg-oled-elevated font-bold border border-slate-200 dark:border-oled-border" />
+          </div>
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Boy (cm)</label>
+            <input type="number" id="profHeight" value="178" class="w-full px-3 py-2.5 rounded-2xl bg-slate-100 dark:bg-oled-elevated font-bold border border-slate-200 dark:border-oled-border" />
+          </div>
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Kilo (kg)</label>
+            <input type="number" step="0.1" id="profWeight" value="76" class="w-full px-3 py-2.5 rounded-2xl bg-slate-100 dark:bg-oled-elevated font-bold border border-slate-200 dark:border-oled-border" />
+          </div>
+          <div class="col-span-2">
+            <label class="block text-slate-400 font-semibold mb-1">Aktivite Seviyesi</label>
+            <select id="profActivity" class="w-full px-3 py-2.5 rounded-2xl bg-slate-100 dark:bg-oled-elevated font-bold border border-slate-200 dark:border-oled-border">
+              <option value="1.2">Hareketsiz (Masa başı iş)</option>
+              <option value="1.375">Hafif Aktif (Haftada 1-3 gün yürüyüş/spor)</option>
+              <option value="1.55" selected>Orta Aktif (Haftada 3-5 gün egzersiz)</option>
+              <option value="1.725">Çok Aktif (Haftada 6-7 gün yoğun spor)</option>
+            </select>
+          </div>
+          <div class="col-span-2">
+            <label class="block text-slate-400 font-semibold mb-1">Hedefiniz</label>
+            <select id="profGoal" class="w-full px-3 py-2.5 rounded-2xl bg-slate-100 dark:bg-oled-elevated font-bold border border-slate-200 dark:border-oled-border">
+              <option value="lose">Kilo Verme (-450 kcal açık)</option>
+              <option value="maintain" selected>Mevcut Kiloyu Koruma</option>
+              <option value="gain">Sağlıklı Kas Kazanımı (+350 kcal)</option>
+            </select>
+          </div>
+        </div>
+
+        <button onclick="calculateAndSaveGoals()" class="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold shadow-lg shadow-emerald-500/20 active:scale-95 transition">
+          Hedefleri Hesapla ve Uygula
+        </button>
+
+        <!-- Manual Override Section -->
+        <div class="pt-3 border-t border-slate-100 dark:border-oled-border grid grid-cols-2 gap-2.5 text-xs">
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Manuel Kalori (kcal)</label>
+            <input type="number" id="manualKcalInput" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-oled-elevated font-bold" />
+          </div>
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Su Hedefi (ml)</label>
+            <input type="number" id="manualWaterInput" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-oled-elevated font-bold" />
+          </div>
+          <button onclick="saveManualTargets()" class="col-span-2 py-2.5 rounded-xl bg-slate-900 dark:bg-oled-elevated text-white font-bold border border-slate-700 active:scale-95 transition">
+            Manuel Hedefleri Kaydet
+          </button>
+        </div>
+      </div>
+
+      <!-- Theme & Backup Settings -->
+      <div class="rounded-3xl bg-white dark:bg-oled-card border border-slate-200/80 dark:border-oled-border p-4 shadow-sm space-y-3">
+        <h3 class="text-sm font-extrabold">Görünüm ve Veri Yönetimi</h3>
+
+        <!-- Standalone App Store API Key Configuration -->
+        <div class="p-3 rounded-2xl bg-slate-50 dark:bg-oled-elevated border border-slate-200/70 dark:border-oled-border space-y-2">
+          <div class="flex items-center justify-between">
+            <label for="geminiApiKeyInput" class="text-xs font-bold text-emerald-500">Gemini Vision API Anahtarı (iOS App)</label>
+            <span class="text-[10px] text-slate-400">Cihazda şifreli saklanır</span>
+          </div>
+          <div class="flex gap-2">
+            <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." class="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-oled-card text-xs font-mono border border-slate-200 dark:border-oled-border" />
+            <button onclick="saveGeminiApiKey()" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold active:scale-95 transition">Kaydet</button>
+          </div>
+          <p class="text-[10px] text-slate-400 leading-relaxed">
+            App Store sürümünde kamera ile yapay zeka hacim analizinin bağımsız çalışması için Google AI Studio anahtarınızı girin.
+          </p>
+        </div>
+
+        <div class="flex items-center justify-between py-2">
+          <div>
+            <p class="text-xs font-bold">Koyu Tema (OLED Dark Mode)</p>
+            <p class="text-[11px] text-slate-400">iPhone 16e OLED ekranı için pil dostu mod</p>
+          </div>
+          <button onclick="toggleTheme()" id="themeToggleBtn" class="px-3.5 py-2 rounded-xl bg-emerald-500/15 text-emerald-500 text-xs font-bold">
+            Koyu Mod Aktif
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-100 dark:border-oled-border">
+          <button onclick="exportBackupJSON()" class="py-2.5 px-3 rounded-2xl bg-slate-100 dark:bg-oled-elevated text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition">
+            <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>JSON Yedek Al</span>
+          </button>
+          <label class="py-2.5 px-3 rounded-2xl bg-slate-100 dark:bg-oled-elevated text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition">
+            <svg class="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            <span>Yedek Yükle</span>
+            <input type="file" accept=".json" class="hidden" onchange="importBackupJSON(event)" />
+          </label>
+        </div>
+
+        <!-- Apple App Store Compliance: Privacy Policy & Data Deletion (Guideline 5.1.1) -->
+        <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-100 dark:border-oled-border">
+          <button onclick="openPrivacyModal()" class="py-2.5 px-3 rounded-2xl bg-slate-100 dark:bg-oled-elevated text-xs font-bold text-slate-600 dark:text-slate-300 active:scale-95 transition">
+            🔒 Gizlilik Politikası
+          </button>
+          <button onclick="openDeleteDataModal()" class="py-2.5 px-3 rounded-2xl bg-rose-500/15 text-rose-500 text-xs font-bold active:scale-95 transition">
+            🗑️ Tüm Verileri Sil
+          </button>
+        </div>
+      </div>
+
+      <!-- iPhone Safari PWA Guide -->
+      <div class="rounded-3xl bg-gradient-to-br from-emerald-500/15 to-cyan-500/10 border border-emerald-500/30 p-4 space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="text-base">📱</span>
+          <h3 class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400">iPhone 16e Ana Ekrana Ekleme Rehberi</h3>
+        </div>
+        <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+          Bu uygulamayı tam ekran ve çevrimdışı destekli bir iOS uygulaması gibi kullanmak için Safari alt çubuğundaki
+          <strong>Paylaş (↑)</strong> simgesine dokunun ve <strong>"Ana Ekrana Ekle"</strong> seçeneğini seçin.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== BOTTOM NAVIGATION BAR ==================== -->
+  <nav class="bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-white/90 dark:bg-oled-card/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-oled-border">
+    <div class="max-w-lg mx-auto px-2 pt-2 flex items-center justify-around">
+      <button onclick="switchTab('dashboard')" data-nav="dashboard" class="nav-btn flex flex-col items-center gap-1 py-1 px-2 text-emerald-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        <span class="text-[10px] font-bold">Özet</span>
+      </button>
+
+      <button onclick="switchTab('database')" data-nav="database" class="nav-btn flex flex-col items-center gap-1 py-1 px-2 text-slate-400">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        <span class="text-[10px] font-bold">Yiyecek Ekle</span>
+      </button>
+
+      <!-- Center Prominent AI Scan Button -->
+      <button onclick="switchTab('scanner')" data-nav="scanner" class="nav-btn -mt-6 flex flex-col items-center">
+        <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center shadow-lg shadow-emerald-500/35 border-4 border-slate-50 dark:border-oled-bg active:scale-95 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+        </div>
+        <span class="text-[10px] font-extrabold text-emerald-500 mt-0.5">Tara / AI</span>
+      </button>
+
+      <button onclick="switchTab('stats')" data-nav="stats" class="nav-btn flex flex-col items-center gap-1 py-1 px-2 text-slate-400">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span class="text-[10px] font-bold">İstatistik</span>
+      </button>
+
+      <button onclick="switchTab('profile')" data-nav="profile" class="nav-btn flex flex-col items-center gap-1 py-1 px-2 text-slate-400">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        <span class="text-[10px] font-bold">Profil</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==================== MODAL 1: FOOD DETAIL & PORTION SELECTOR ==================== -->
+  <div id="foodDetailModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white dark:bg-oled-card border-t sm:border border-slate-200 dark:border-oled-border p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <span id="modalFoodBrand" class="text-[11px] font-bold uppercase tracking-wider text-emerald-500">Marka</span>
+          <h3 id="modalFoodName" class="text-base font-extrabold leading-snug">Ürün Adı</h3>
+          <p id="modalFoodCategory" class="text-xs text-slate-400 mt-0.5">Kategori</p>
+        </div>
+        <button onclick="closeFoodDetailModal()" class="p-2 rounded-full bg-slate-100 dark:bg-oled-elevated text-slate-500">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Unit / Portion Presets -->
+      <div>
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Birim / Porsiyon Seçimi</label>
+        <div id="modalPortionPresets" class="grid grid-cols-2 gap-2"></div>
+      </div>
+
+      <!-- Custom Gram Slider & Input -->
+      <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-oled-elevated space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold">Miktar (Gram / ml):</span>
+          <div class="flex items-center gap-1.5">
+            <button onclick="adjustModalGrams(-10)" class="w-8 h-8 rounded-xl bg-white dark:bg-oled-card font-bold text-sm shadow-sm">-10</button>
+            <input type="number" id="modalGramInput" oninput="updateModalNutritionDisplay()" class="w-20 text-center py-1.5 rounded-xl bg-white dark:bg-oled-card font-extrabold text-sm border border-slate-200 dark:border-oled-border" />
+            <button onclick="adjustModalGrams(10)" class="w-8 h-8 rounded-xl bg-white dark:bg-oled-card font-bold text-sm shadow-sm">+10</button>
+          </div>
+        </div>
+        <input type="range" id="modalGramSlider" min="5" max="1000" step="5" oninput="syncSliderToInput()" class="w-full" />
+      </div>
+
+      <!-- Live Calculated Macros Box -->
+      <div class="grid grid-cols-4 gap-2 text-center">
+        <div class="p-2.5 rounded-2xl bg-emerald-500/15">
+          <span id="modalCalcKcal" class="block text-base font-extrabold text-emerald-500">0</span>
+          <span class="text-[10px] font-semibold text-slate-400">Kalori (kcal)</span>
+        </div>
+        <div class="p-2.5 rounded-2xl bg-sky-500/15">
+          <span id="modalCalcCarb" class="block text-base font-extrabold text-sky-500">0g</span>
+          <span class="text-[10px] font-semibold text-slate-400">Karb</span>
+        </div>
+        <div class="p-2.5 rounded-2xl bg-teal-500/15">
+          <span id="modalCalcProt" class="block text-base font-extrabold text-teal-400">0g</span>
+          <span class="text-[10px] font-semibold text-slate-400">Protein</span>
+        </div>
+        <div class="p-2.5 rounded-2xl bg-amber-500/15">
+          <span id="modalCalcFat" class="block text-base font-extrabold text-amber-500">0g</span>
+          <span class="text-[10px] font-semibold text-slate-400">Yağ</span>
+        </div>
+      </div>
+
+      <!-- Meal Selection & Confirm -->
+      <div class="flex gap-2 pt-1">
+        <select id="modalMealSelect" class="px-3 py-3 rounded-2xl bg-slate-100 dark:bg-oled-elevated text-xs font-bold border border-slate-200 dark:border-oled-border">
+          <option value="Kahvaltı">Kahvaltı</option>
+          <option value="Öğle Yemeği">Öğle Yemeği</option>
+          <option value="Akşam Yemeği">Akşam Yemeği</option>
+          <option value="Ara Öğün">Ara Öğün</option>
+        </select>
+        <button onclick="confirmAddModalFood()" class="flex-1 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold shadow-lg shadow-emerald-500/25 active:scale-95 transition">
+          + Öğüne Ekle
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: CREATE CUSTOM FOOD ==================== -->
+  <div id="customFoodModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white dark:bg-oled-card border-t sm:border border-slate-200 dark:border-oled-border p-5 space-y-3.5 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-extrabold">Yeni Yiyecek / İçecek Oluştur</h3>
+          <p class="text-xs text-slate-400">100g / 100ml başına besin değerlerini girin</p>
+        </div>
+        <button onclick="closeCustomFoodModal()" class="p-2 rounded-full bg-slate-100 dark:bg-oled-elevated text-slate-500">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5 text-xs">
+        <div class="col-span-2">
+          <label class="block text-slate-400 font-semibold mb-1">Ürün / Yemek Adı *</label>
+          <input type="text" id="cfName" placeholder="Örn: Ev Yapımı Fıstık Ezmesi" class="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-oled-elevated font-semibold" />
+        </div>
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Marka (Opsiyonel)</label>
+          <input type="text" id="cfBrand" placeholder="Örn: Ev Yapımı / Züber" class="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-oled-elevated font-semibold" />
+        </div>
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Kategori</label>
+          <select id="cfCategory" class="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-oled-elevated font-semibold"></select>
+        </div>
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Standart Porsiyon (g/ml)</label>
+          <input type="number" id="cfPortionGrams" value="100" class="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-oled-elevated font-bold" />
+        </div>
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Kalori (100g için kcal) *</label>
+          <input type="number" id="cfKcal" placeholder="250" class="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-oled-elevated font-bold" />
+        </div>
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Karbonhidrat (100g)</label>
+          <input type="number" step="0.1" id="cfCarb" placeholder="20" class="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-oled-elevated font-bold" />
+        </div>
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Protein (100g)</label>
+          <input type="number" step="0.1" id="cfProt" placeholder="12" class="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-oled-elevated font-bold" />
+        </div>
+        <div class="col-span-2">
+          <label class="block text-slate-400 font-semibold mb-1">Yağ (100g)</label>
+          <input type="number" step="0.1" id="cfFat" placeholder="10" class="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-oled-elevated font-bold" />
+        </div>
+      </div>
+
+      <button onclick="saveCustomFood()" class="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold shadow-lg shadow-emerald-500/25 active:scale-95 transition">
+        Ürünü Veritabanına Kaydet
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== CUSTOM TOAST NOTIFICATION ==================== -->
+  <div id="toastContainer" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 -translate-y-3">
+    <div id="toastMessage" class="px-4 py-2.5 rounded-2xl bg-slate-900 dark:bg-emerald-600 text-white text-xs font-bold shadow-xl border border-white/10">
+      İşlem başarılı
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 3: PRIVACY POLICY (APP STORE REQUIRED) ==================== -->
+  <div id="privacyModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white dark:bg-oled-card border-t sm:border border-slate-200 dark:border-oled-border p-5 space-y-3.5 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-extrabold">Gizlilik Politikası ve Veri Güvenliği</h3>
+        <button onclick="closePrivacyModal()" class="p-2 rounded-full bg-slate-100 dark:bg-oled-elevated text-slate-500">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="text-xs text-slate-600 dark:text-slate-300 space-y-2.5 leading-relaxed">
+        <p><strong>1. Yerel Veri Depolama:</strong> Tüm kalori günlükleriniz, su tüketiminiz, kilo geçmişiniz ve özel yemek tarifleriniz yalnızca kendi iPhone cihazınızın yerel hafızasında saklanır; harici bir sunucuda depolanmaz.</p>
+        <p><strong>2. Kamera ve Fotoğraf Kullanımı:</strong> Kamera erişimi yalnızca tabaktaki yemeklerin hacmini ve besin değerlerini analiz etmek amacıyla kullanılır. Çekilen fotoğraflar kaydedilmez veya üçüncü taraflarla paylaşılmaz.</p>
+        <p><strong>3. Tıbbi Sorumluluk Reddi:</strong> NutriVision TR yalnızca bilgilendirme ve beslenme takibi amaçlıdır; tıbbi teşhis veya tedavi yerine geçmez.</p>
+      </div>
+      <button onclick="closePrivacyModal()" class="w-full py-3 rounded-2xl bg-emerald-500 text-white text-xs font-extrabold">Anladım</button>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 4: CONFIRM DELETE ALL DATA ==================== -->
+  <div id="deleteDataModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-sm rounded-3xl bg-white dark:bg-oled-card border border-slate-200 dark:border-oled-border p-5 space-y-4 text-center">
+      <div class="w-12 h-12 rounded-full bg-rose-500/15 text-rose-500 flex items-center justify-center mx-auto text-xl">⚠️</div>
+      <div class="space-y-1">
+        <h3 class="text-base font-extrabold">Tüm Veriler Silinsin mi?</h3>
+        <p class="text-xs text-slate-400">Tüm öğün kayıtlarınız, kilo geçmişiniz ve özel ürünleriniz cihazınızdan kalıcı olarak silinecektir.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5">
+        <button onclick="closeDeleteDataModal()" class="py-2.5 rounded-2xl bg-slate-100 dark:bg-oled-elevated text-xs font-bold">Vazgeç</button>
+        <button onclick="confirmDeleteAllData()" class="py-2.5 rounded-2xl bg-rose-500 text-white text-xs font-extrabold">Kalıcı Olarak Sil</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT APPLICATION LOGIC ==================== -->
+  <script>
+    // =========================================================================
+    // 1. CONSTANTS & BRAND-BASED TURKISH FOOD DATABASE (60+ ITEMS)
+    // =========================================================================
+    const FOOD_CATEGORIES = [
+      "Tümü",
+      "Süt ve Süt Ürünleri",
+      "Kahvaltılıklar",
+      "Kırmızı Et",
+      "Beyaz Et",
+      "Balık ve Deniz Ürünleri",
+      "Ev Yemekleri (Türk Mutfağı)",
+      "Tahıllar ve Baklagiller",
+      "Sebze ve Meyveler",
+      "Atıştırmalık ve Tatlılar",
+      "İçecekler"
+    ];
+
+    const INITIAL_FOOD_DB = [
+      // 1. Süt ve Süt Ürünleri
+      { id: "db_1", name: "Tam Yağlı Beyaz Peynir (750 Gr)", brand: "Sütaş", category: "Süt ve Süt Ürünleri", portionName: "1 Dilim (30g)", portionGrams: 30, density: 1.05, kcal: 285, carb: 2.1, prot: 16.5, fat: 23.0 },
+      { id: "db_2", name: "Süzme Peynir (500 Gr)", brand: "Pınar", category: "Süt ve Süt Ürünleri", portionName: "1 Porsiyon (50g)", portionGrams: 50, density: 1.04, kcal: 236, carb: 3.8, prot: 13.2, fat: 18.5 },
+      { id: "db_3", name: "Tam Yağlı Süt (1 L)", brand: "İçim", category: "Süt ve Süt Ürünleri", portionName: "1 Su Bardağı (200ml)", portionGrams: 200, density: 1.03, kcal: 61, carb: 4.7, prot: 3.1, fat: 3.3 },
+      { id: "db_4", name: "Probiyotik Sade Yoğurt (125 Gr)", brand: "Eker", category: "Süt ve Süt Ürünleri", portionName: "1 Kutu (125g)", portionGrams: 125, density: 1.03, kcal: 64, carb: 4.9, prot: 3.8, fat: 3.2 },
+      { id: "db_5", name: "Taze Kaşar Peyniri (400 Gr)", brand: "Torku", category: "Süt ve Süt Ürünleri", portionName: "2 Dilim (40g)", portionGrams: 40, density: 1.08, kcal: 342, carb: 1.8, prot: 24.5, fat: 26.2 },
+      { id: "db_6", name: "Quark Sade Yüksek Protein (140 Gr)", brand: "Sek", category: "Süt ve Süt Ürünleri", portionName: "1 Kutu (140g)", portionGrams: 140, density: 1.05, kcal: 78, carb: 4.2, prot: 10.5, fat: 2.0 },
+      { id: "db_7", name: "Labne Peyniri (180 Gr)", brand: "Pınar", category: "Süt ve Süt Ürünleri", portionName: "1 Yemek Kaşığı (20g)", portionGrams: 20, density: 1.02, kcal: 215, carb: 4.0, prot: 6.2, fat: 19.5 },
+
+      // 2. Kahvaltılıklar
+      { id: "db_8", name: "Süzme Çiçek Balı (350 Gr)", brand: "Balparmak", category: "Kahvaltılıklar", portionName: "1 Tatlı Kaşığı (10g)", portionGrams: 10, density: 1.42, kcal: 304, carb: 82.0, prot: 0.3, fat: 0.0 },
+      { id: "db_9", name: "Nuga Kakaolu Fındık Kreması (350 Gr)", brand: "Fiskobirlik", category: "Kahvaltılıklar", portionName: "1 Yemek Kaşığı (20g)", portionGrams: 20, density: 1.25, kcal: 546, carb: 54.0, prot: 6.8, fat: 33.5 },
+      { id: "db_10", name: "Siyah Zeytin Doğal Salamura (500 Gr)", brand: "Marmarabirlik", category: "Kahvaltılıklar", portionName: "8 Adet (30g)", portionGrams: 30, density: 0.95, kcal: 175, carb: 3.2, prot: 1.6, fat: 17.2 },
+      { id: "db_11", name: "Sade Tahin Helvası (350 Gr)", brand: "Koska", category: "Kahvaltılıklar", portionName: "1 Dilim (40g)", portionGrams: 40, density: 1.22, kcal: 528, carb: 48.0, prot: 12.5, fat: 31.8 },
+      { id: "db_12", name: "Haşlanmış Yumurta (Orta Boy)", brand: "Doğal", category: "Kahvaltılıklar", portionName: "1 Adet (55g)", portionGrams: 55, density: 1.03, kcal: 155, carb: 1.1, prot: 12.6, fat: 10.6 },
+      { id: "db_13", name: "Menemen (Domatesli Biberli)", brand: "Türk Mutfağı", category: "Kahvaltılıklar", portionName: "1 Porsiyon (220g)", portionGrams: 220, density: 0.95, kcal: 118, carb: 5.4, prot: 6.5, fat: 7.8 },
+      { id: "db_14", name: "Klasik Yulaf Ezmesi (500 Gr)", brand: "Eti Lifalif", category: "Kahvaltılıklar", portionName: "4 Yemek Kaşığı (40g)", portionGrams: 40, density: 0.45, kcal: 368, carb: 60.5, prot: 12.6, fat: 7.0 },
+
+      // 3. Kırmızı Et
+      { id: "db_15", name: "Dana Kıyma %15 Yağlı (Pişmiş)", brand: "Namet", category: "Kırmızı Et", portionName: "1 Porsiyon (120g)", portionGrams: 120, density: 0.96, kcal: 248, carb: 0.0, prot: 25.4, fat: 15.8 },
+      { id: "db_16", name: "Kasap Dana Sucuk (250 Gr)", brand: "Pınar", category: "Kırmızı Et", portionName: "5 Dilim (50g)", portionGrams: 50, density: 1.05, kcal: 392, carb: 2.4, prot: 18.2, fat: 34.5 },
+      { id: "db_17", name: "Izgara Dana Antrikot", brand: "Kasap", category: "Kırmızı Et", portionName: "1 Porsiyon (180g)", portionGrams: 180, density: 1.02, kcal: 265, carb: 0.0, prot: 27.0, fat: 17.2 },
+      { id: "db_18", name: "Ev Yapımı Izgara Köfte", brand: "Türk Mutfağı", category: "Kırmızı Et", portionName: "4 Adet (120g)", portionGrams: 120, density: 0.98, kcal: 242, carb: 6.8, prot: 19.5, fat: 15.1 },
+      { id: "db_19", name: "İskender Kebap (Tereyağlı & Yoğurtlu)", brand: "Türk Mutfağı", category: "Kırmızı Et", portionName: "1 Porsiyon (350g)", portionGrams: 350, density: 0.92, kcal: 215, carb: 16.5, prot: 13.8, fat: 10.4 },
+      { id: "db_20", name: "Dana Pastırma Çemensiz (120 Gr)", brand: "Apikoğlu", category: "Kırmızı Et", portionName: "4 Dilim (30g)", portionGrams: 30, density: 1.06, kcal: 250, carb: 1.5, prot: 31.0, fat: 13.0 },
+
+      // 4. Beyaz Et
+      { id: "db_21", name: "Izgara Piliç Göğüs Fileto", brand: "Banvit", category: "Beyaz Et", portionName: "1 Porsiyon (150g)", portionGrams: 150, density: 1.04, kcal: 165, carb: 0.0, prot: 31.0, fat: 3.6 },
+      { id: "db_22", name: "Izgara Tavuk But (Derisiz)", brand: "Erpiliç", category: "Beyaz Et", portionName: "1 Adet (140g)", portionGrams: 140, density: 1.02, kcal: 195, carb: 0.0, prot: 24.8, fat: 10.2 },
+      { id: "db_23", name: "Sebzeli Tavuk Sote", brand: "Türk Mutfağı", category: "Beyaz Et", portionName: "1 Porsiyon (220g)", portionGrams: 220, density: 0.92, kcal: 142, carb: 4.5, prot: 17.8, fat: 5.8 },
+      { id: "db_24", name: "Fırın Tavuk Kanat", brand: "Şenpiliç", category: "Beyaz Et", portionName: "4 Adet (140g)", portionGrams: 140, density: 0.98, kcal: 254, carb: 0.5, prot: 21.5, fat: 18.2 },
+      { id: "db_25", name: "Hindi Füme Dilimli (150 Gr)", brand: "Polonez", category: "Beyaz Et", portionName: "3 Dilim (30g)", portionGrams: 30, density: 1.04, kcal: 108, carb: 2.1, prot: 18.5, fat: 2.6 },
+
+      // 5. Balık ve Deniz Ürünleri
+      { id: "db_26", name: "Izgara Somon Fileto", brand: "Dardanel", category: "Balık ve Deniz Ürünleri", portionName: "1 Porsiyon (180g)", portionGrams: 180, density: 1.01, kcal: 208, carb: 0.0, prot: 20.4, fat: 13.4 },
+      { id: "db_27", name: "Zeytinyağlı Ton Balığı (160 Gr)", brand: "Dardanel", category: "Balık ve Deniz Ürünleri", portionName: "1 Kutu Süzülmüş (110g)", portionGrams: 110, density: 1.05, kcal: 198, carb: 0.0, prot: 25.2, fat: 10.5 },
+      { id: "db_28", name: "Fırın Çipura", brand: "Deniz", category: "Balık ve Deniz Ürünleri", portionName: "1 Orta Boy (220g)", portionGrams: 220, density: 1.01, kcal: 152, carb: 0.0, prot: 21.5, fat: 7.1 },
+      { id: "db_29", name: "Hamsi Tava (Mısır Unlu)", brand: "Karadeniz", category: "Balık ve Deniz Ürünleri", portionName: "1 Porsiyon (180g)", portionGrams: 180, density: 0.92, kcal: 235, carb: 9.8, prot: 18.4, fat: 13.6 },
+
+      // 6. Ev Yemekleri (Türk Mutfağı)
+      { id: "db_30", name: "Süzme Mercimek Çorbası", brand: "Türk Mutfağı", category: "Ev Yemekleri (Türk Mutfağı)", portionName: "1 Kase (250ml)", portionGrams: 250, density: 1.02, kcal: 68, carb: 10.2, prot: 3.6, fat: 1.5 },
+      { id: "db_31", name: "Etli Kuru Fasulye Yemeği", brand: "Türk Mutfağı", category: "Ev Yemekleri (Türk Mutfağı)", portionName: "1 Porsiyon (250g)", portionGrams: 250, density: 0.98, kcal: 145, carb: 16.8, prot: 8.5, fat: 4.8 },
+      { id: "db_32", name: "Tereyağlı Pirinç Pilavı", brand: "Türk Mutfağı", category: "Ev Yemekleri (Türk Mutfağı)", portionName: "1 Porsiyon (160g)", portionGrams: 160, density: 0.85, kcal: 172, carb: 28.5, prot: 2.8, fat: 5.1 },
+      { id: "db_33", name: "Domatesli Bulgur Pilavı", brand: "Türk Mutfağı", category: "Ev Yemekleri (Türk Mutfağı)", portionName: "1 Porsiyon (160g)", portionGrams: 160, density: 0.84, kcal: 134, carb: 23.2, prot: 3.6, fat: 3.0 },
+      { id: "db_34", name: "Zeytinyağlı Yaprak Sarma", brand: "Türk Mutfağı", category: "Ev Yemekleri (Türk Mutfağı)", portionName: "6 Adet (150g)", portionGrams: 150, density: 0.94, kcal: 162, carb: 22.0, prot: 2.5, fat: 7.2 },
+      { id: "db_35", name: "Karnıyarık (Kıymalı Patlıcan)", brand: "Türk Mutfağı", category: "Ev Yemekleri (Türk Mutfağı)", portionName: "1 Adet (220g)", portionGrams: 220, density: 0.90, kcal: 148, carb: 7.5, prot: 8.2, fat: 9.6 },
+      { id: "db_36", name: "Kayseri Mantısı (Yoğurt & Soslu)", brand: "Türk Mutfağı", category: "Ev Yemekleri (Türk Mutfağı)", portionName: "1 Porsiyon (260g)", portionGrams: 260, density: 0.92, kcal: 196, carb: 25.4, prot: 8.9, fat: 6.4 },
+      { id: "db_37", name: "Ezogelin Çorbası", brand: "Türk Mutfağı", category: "Ev Yemekleri (Türk Mutfağı)", portionName: "1 Kase (250ml)", portionGrams: 250, density: 1.02, kcal: 74, carb: 11.5, prot: 3.4, fat: 1.7 },
+      { id: "db_38", name: "İzmir Köfte (Patatesli)", brand: "Türk Mutfağı", category: "Ev Yemekleri (Türk Mutfağı)", portionName: "1 Porsiyon (250g)", portionGrams: 250, density: 0.94, kcal: 168, carb: 10.2, prot: 11.4, fat: 9.1 },
+
+      // 7. Tahıllar ve Baklagiller
+      { id: "db_39", name: "Tam Buğday Ekmeği (Dilimli)", brand: "Uno", category: "Tahıllar ve Baklagiller", portionName: "1 Dilim (28g)", portionGrams: 28, density: 0.42, kcal: 242, carb: 44.5, prot: 9.2, fat: 2.4 },
+      { id: "db_40", name: "Klasik Spagetti Makarna (Haşlanmış)", brand: "Barilla", category: "Tahıllar ve Baklagiller", portionName: "1 Porsiyon (180g)", portionGrams: 180, density: 0.78, kcal: 158, carb: 31.0, prot: 5.8, fat: 0.9 },
+      { id: "db_41", name: "Susamlı Sokak Simidi", brand: "Fırın", category: "Tahıllar ve Baklagiller", portionName: "1 Adet (100g)", portionGrams: 100, density: 0.48, kcal: 312, carb: 54.0, prot: 9.8, fat: 6.2 },
+      { id: "db_42", name: "Haşlanmış Nohut", brand: "Yayla", category: "Tahıllar ve Baklagiller", portionName: "1 Su Bardağı (150g)", portionGrams: 150, density: 0.88, kcal: 164, carb: 27.4, prot: 8.9, fat: 2.6 },
+      { id: "db_43", name: "Beyaz Somun Ekmek", brand: "Halk Ekmek", category: "Tahıllar ve Baklagiller", portionName: "1 İnce Dilim (25g)", portionGrams: 25, density: 0.38, kcal: 265, carb: 51.0, prot: 8.4, fat: 1.5 },
+
+      // 8. Sebze ve Meyveler
+      { id: "db_44", name: "Çoban Salata (Zeytinyağlı)", brand: "Taze", category: "Sebze ve Meyveler", portionName: "1 Kase (200g)", portionGrams: 200, density: 0.65, kcal: 54, carb: 4.8, prot: 1.1, fat: 3.5 },
+      { id: "db_45", name: "Yerli Anamur Muzu", brand: "Manav", category: "Sebze ve Meyveler", portionName: "1 Orta Boy (110g)", portionGrams: 110, density: 0.94, kcal: 89, carb: 22.8, prot: 1.1, fat: 0.3 },
+      { id: "db_46", name: "Amasya Elması", brand: "Manav", category: "Sebze ve Meyveler", portionName: "1 Orta Boy (140g)", portionGrams: 140, density: 0.82, kcal: 52, carb: 13.8, prot: 0.3, fat: 0.2 },
+      { id: "db_47", name: "Avokado (Olgunlaşmış)", brand: "Manav", category: "Sebze ve Meyveler", portionName: "Yarım Adet (75g)", portionGrams: 75, density: 0.95, kcal: 160, carb: 8.5, prot: 2.0, fat: 14.7 },
+      { id: "db_48", name: "Haşlanmış Brokoli", brand: "Taze", category: "Sebze ve Meyveler", portionName: "1 Kase (150g)", portionGrams: 150, density: 0.58, kcal: 35, carb: 7.2, prot: 2.4, fat: 0.4 },
+
+      // 9. Atıştırmalık ve Tatlılar
+      { id: "db_49", name: "Cicibebe Bisküvi (172 Gr)", brand: "Eti", category: "Atıştırmalık ve Tatlılar", portionName: "10 Adet (45g)", portionGrams: 45, density: 0.68, kcal: 448, carb: 72.5, prot: 6.4, fat: 14.2 },
+      { id: "db_50", name: "Çikolatalı Gofret (36 Gr)", brand: "Ülker", category: "Atıştırmalık ve Tatlılar", portionName: "1 Paket (36g)", portionGrams: 36, density: 0.62, kcal: 534, carb: 58.0, prot: 6.2, fat: 30.5 },
+      { id: "db_51", name: "Fıstıklı Gaziantep Baklavası", brand: "Güllüoğlu", category: "Atıştırmalık ve Tatlılar", portionName: "1 Dilim (45g)", portionGrams: 45, density: 0.88, kcal: 428, carb: 51.0, prot: 6.8, fat: 22.4 },
+      { id: "db_52", name: "Fırın Sütlaç", brand: "Türk Mutfağı", category: "Atıştırmalık ve Tatlılar", portionName: "1 Kase (200g)", portionGrams: 200, density: 1.04, kcal: 142, carb: 24.5, prot: 3.8, fat: 3.1 },
+      { id: "db_53", name: "Çiğ Karışık Kuruyemiş (Badem/Ceviz/Fındık)", brand: "Tadım", category: "Atıştırmalık ve Tatlılar", portionName: "1 Avuç (30g)", portionGrams: 30, density: 0.64, kcal: 615, carb: 14.2, prot: 17.5, fat: 54.0 },
+      { id: "db_54", name: "Kakaolu Protein Bar (35 Gr)", brand: "Züber", category: "Atıştırmalık ve Tatlılar", portionName: "1 Bar (35g)", portionGrams: 35, density: 0.85, kcal: 365, carb: 46.0, prot: 15.2, fat: 11.4 },
+
+      // 10. İçecekler
+      { id: "db_55", name: "Rize Turist Çayı (Şekersiz)", brand: "Çaykur", category: "İçecekler", portionName: "1 İnce Belli (100ml)", portionGrams: 100, density: 1.0, kcal: 1, carb: 0.2, prot: 0.0, fat: 0.0 },
+      { id: "db_56", name: "Türk Kahvesi (Sade)", brand: "Kurukahveci Mehmet Efendi", category: "İçecekler", portionName: "1 Fincan (70ml)", portionGrams: 70, density: 1.0, kcal: 3, carb: 0.4, prot: 0.2, fat: 0.1 },
+      { id: "db_57", name: "Ayran (200 ml)", brand: "Sütaş", category: "İçecekler", portionName: "1 Küçük Kutu (200ml)", portionGrams: 200, density: 1.02, kcal: 37, carb: 2.8, prot: 2.1, fat: 1.9 },
+      { id: "db_58", name: "Coca-Cola Zero Sugar (330 ml)", brand: "Coca-Cola", category: "İçecekler", portionName: "1 Kutu (330ml)", portionGrams: 330, density: 1.0, kcal: 0.3, carb: 0.0, prot: 0.0, fat: 0.0 },
+      { id: "db_59", name: "Taze Sıkılmış Portakal Suyu", brand: "Doğal", category: "İçecekler", portionName: "1 Su Bardağı (200ml)", portionGrams: 200, density: 1.04, kcal: 45, carb: 10.4, prot: 0.7, fat: 0.2 },
+      { id: "db_60", name: "Sade Maden Suyu (200 ml)", brand: "Beypazarı", category: "İçecekler", portionName: "1 Şişe (200ml)", portionGrams: 200, density: 1.0, kcal: 0, carb: 0.0, prot: 0.0, fat: 0.0 }
+    ];
+
+    // =========================================================================
+    // 2. APPLICATION STATE & LOCALSTORAGE PERSISTENCE
+    // =========================================================================
+    const STORAGE_KEY = "nutrivision_tr_state_v1";
+
+    let appState = {
+      selectedDate: getTodayDateStr(),
+      targets: {
+        kcal: 2200,
+        carb: 250,
+        prot: 140,
+        fat: 70,
+        water: 2500
+      },
+      profile: {
+        gender: "male",
+        age: 30,
+        height: 178,
+        weight: 76.0,
+        activity: 1.55,
+        goal: "maintain"
+      },
+      // logs[YYYY-MM-DD] = { meals: { "Kahvaltı": [], "Öğle Yemeği": [], "Akşam Yemeği": [], "Ara Öğün": [] }, water: 0 }
+      logs: {},
+      weightHistory: [
+        { date: getOffsetDateStr(-14), weight: 77.2 },
+        { date: getOffsetDateStr(-7), weight: 76.5 },
+        { date: getTodayDateStr(), weight: 76.0 }
+      ],
+      customFoods: [],
+      geminiApiKey: "",
+      theme: "dark"
+    };
+
+    // Runtime transient state
+    let selectedCategory = "Tümü";
+    let currentModalFood = null;
+    let selectedPlate = { id: "standard", diameterCm: 24, label: "Standart Tabak (24 cm)" };
+    let cameraStream = null;
+    let currentCapturedBase64 = null;
+    let detectedAIFoods = [];
+    let offlineFillPct = 50;
+
+    // =========================================================================
+    // 3. INITIALIZATION, PWA SERVICE WORKER & NETWORK LISTENERS
+    // =========================================================================
+    window.addEventListener("DOMContentLoaded", () => {
+      loadState();
+      applyTheme(appState.theme);
+      registerOfflineServiceWorker();
+      updateNetworkStatus();
+      window.addEventListener("online", updateNetworkStatus);
+      window.addEventListener("offline", updateNetworkStatus);
+
+      initCategoryUI();
+      initOfflineCalculatorSelect();
+      populateProfileInputs();
+      renderAll();
+    });
+
+    function registerOfflineServiceWorker() {
+      // Inline Blob Service Worker for offline shell caching
+      if ("serviceWorker" in navigator) {
+        const swCode = `
+          const CACHE_NAME = 'nutrivision-tr-v1';
+          self.addEventListener('install', (e) => {
+            self.skipWaiting();
+          });
+          self.addEventListener('activate', (e) => {
+            e.waitUntil(clients.claim());
+          });
+          self.addEventListener('fetch', (e) => {
+            if (e.request.method !== 'GET') return;
+            e.respondWith(
+              fetch(e.request)
+                .then((res) => {
+                  const resClone = res.clone();
+                  caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+                  return res;
+                })
+                .catch(() => caches.match(e.request))
+            );
+          });
+        `;
+        try {
+          const blob = new Blob([swCode], { type: "application/javascript" });
+          const swUrl = URL.createObjectURL(blob);
+          navigator.serviceWorker.register(swUrl).catch(() => {});
+        } catch (err) {
+          // Ignore sandboxed iframe SW restrictions gracefully
+        }
+      }
+    }
+
+    function updateNetworkStatus() {
+      const isOnline = navigator.onLine;
+      const badge = document.getElementById("networkStatusBadge");
+      const dot = document.getElementById("networkDot");
+      const text = document.getElementById("networkText");
+
+      if (isOnline) {
+        badge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+        text.textContent = "Çevrimiçi AI Aktif";
+      } else {
+        badge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25";
+        dot.className = "w-2 h-2 rounded-full bg-amber-500";
+        text.textContent = "Çevrimdışı Yerel Mod";
+      }
+    }
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          appState = { ...appState, ...parsed };
+          appState.selectedDate = getTodayDateStr();
+        }
+      } catch (e) {
+        console.warn("State yüklenemedi:", e);
+      }
+      ensureDayLog(appState.selectedDate);
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        showToast("Depolama alanı dolu olabilir!", "error");
+      }
+    }
+
+    function ensureDayLog(dateStr) {
+      if (!appState.logs[dateStr]) {
+        appState.logs[dateStr] = {
+          meals: {
+            "Kahvaltı": [],
+            "Öğle Yemeği": [],
+            "Akşam Yemeği": [],
+            "Ara Öğün": []
+          },
+          water: 0
+        };
+      }
+    }
+
+    // =========================================================================
+    // 4. DATE & NAVIGATION HELPERS
+    // =========================================================================
+    function getTodayDateStr() {
+      const now = new Date();
+      return now.toISOString().split("T")[0];
+    }
+
+    function getOffsetDateStr(offsetDays) {
+      const d = new Date();
+      d.setDate(d.getDate() + offsetDays);
+      return d.toISOString().split("T")[0];
+    }
+
+    function changeDate(delta) {
+      const d = new Date(appState.selectedDate + "T12:00:00");
+      d.setDate(d.getDate() + delta);
+      appState.selectedDate = d.toISOString().split("T")[0];
+      ensureDayLog(appState.selectedDate);
+      renderDashboard();
+    }
+
+    function resetToToday() {
+      appState.selectedDate = getTodayDateStr();
+      ensureDayLog(appState.selectedDate);
+      renderDashboard();
+    }
+
+    function formatDisplayDate(dateStr) {
+      const today = getTodayDateStr();
+      const yesterday = getOffsetDateStr(-1);
+      if (dateStr === today) return "Bugün";
+      if (dateStr === yesterday) return "Dün";
+      const d = new Date(dateStr + "T12:00:00");
+      return d.toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "short" });
+    }
+
+    function switchTab(tabName) {
+      // Stop camera if leaving scanner
+      if (tabName !== "scanner" && cameraStream) {
+        stopLiveCamera();
+      }
+
+      document.querySelectorAll(".tab-view").forEach(el => el.classList.add("hidden"));
+      const targetView = document.getElementById(`view-${tabName}`);
+      if (targetView) targetView.classList.remove("hidden");
+
+      // Show date bar only on dashboard
+      document.getElementById("dateSelectorBar").style.display = tabName === "dashboard" ? "flex" : "none";
+
+      // Update nav button active states
+      document.querySelectorAll(".nav-btn").forEach(btn => {
+        const nav = btn.getAttribute("data-nav");
+        if (nav === "scanner") return;
+        if (nav === tabName) {
+          btn.classList.remove("text-slate-400");
+          btn.classList.add("text-emerald-500");
+        } else {
+          btn.classList.remove("text-emerald-500");
+          btn.classList.add("text-slate-400");
+        }
+      });
+
+      if (tabName === "dashboard") renderDashboard();
+      if (tabName === "database") renderFoodDatabase();
+      if (tabName === "stats") renderStatistics();
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById("toastContainer");
+      const text = document.getElementById("toastMessage");
+      text.textContent = msg;
+      container.classList.remove("opacity-0", "-translate-y-3");
+      container.classList.add("opacity-100", "translate-y-0");
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        container.classList.remove("opacity-100", "translate-y-0");
+        container.classList.add("opacity-0", "-translate-y-3");
+      }, 2600);
+    }
+
+    // =========================================================================
+    // 5. DASHBOARD RENDERING (CALORIES, MACROS, WATER, MEALS)
+    // =========================================================================
+    function renderAll() {
+      renderDashboard();
+      renderFoodDatabase();
+    }
+
+    function renderDashboard() {
+      ensureDayLog(appState.selectedDate);
+      document.getElementById("currentDateLabel").textContent = formatDisplayDate(appState.selectedDate);
+
+      const dayData = appState.logs[appState.selectedDate];
+      const targets = appState.targets;
+
+      let totalKcal = 0, totalCarb = 0, totalProt = 0, totalFat = 0, totalGrams = 0;
+
+      Object.values(dayData.meals).forEach(items => {
+        items.forEach(item => {
+          totalKcal += item.kcal;
+          totalCarb += item.carb;
+          totalProt += item.prot;
+          totalFat += item.fat;
+          totalGrams += item.grams;
+        });
+      });
+
+      // Update Summary Ring
+      document.getElementById("dashTargetKcal").textContent = Math.round(targets.kcal);
+      document.getElementById("dashConsumedKcal").textContent = Math.round(totalKcal);
+      document.getElementById("dashTotalGrams").textContent = `${Math.round(totalGrams)}g`;
+
+      const remaining = Math.round(targets.kcal - totalKcal);
+      const remEl = document.getElementById("dashRemainingKcal");
+      const remLbl = document.getElementById("dashRemainingLabel");
+
+      if (remaining >= 0) {
+        remEl.textContent = remaining;
+        remLbl.textContent = "Kalan kcal";
+        remLbl.className = "text-[11px] font-semibold text-emerald-500";
+      } else {
+        remEl.textContent = Math.abs(remaining);
+        remLbl.textContent = "Fazla kcal";
+        remLbl.className = "text-[11px] font-semibold text-rose-500";
+      }
+
+      const circumference = 314.16;
+      const pct = Math.min(1, totalKcal / Math.max(1, targets.kcal));
+      document.getElementById("calorieRingCircle").style.strokeDashoffset = circumference * (1 - pct);
+
+      // Update Macro Bars
+      document.getElementById("dashCarbVal").textContent = Math.round(totalCarb);
+      document.getElementById("dashCarbTarget").textContent = targets.carb;
+      document.getElementById("dashCarbBar").style.width = `${Math.min(100, (totalCarb / Math.max(1, targets.carb)) * 100)}%`;
+
+      document.getElementById("dashProtVal").textContent = Math.round(totalProt);
+      document.getElementById("dashProtTarget").textContent = targets.prot;
+      document.getElementById("dashProtBar").style.width = `${Math.min(100, (totalProt / Math.max(1, targets.prot)) * 100)}%`;
+
+      document.getElementById("dashFatVal").textContent = Math.round(totalFat);
+      document.getElementById("dashFatTarget").textContent = targets.fat;
+      document.getElementById("dashFatBar").style.width = `${Math.min(100, (totalFat / Math.max(1, targets.fat)) * 100)}%`;
+
+      // Update Water Tracker
+      const waterMl = dayData.water || 0;
+      const waterTarget = targets.water || 2500;
+      const waterPct = Math.round((waterMl / waterTarget) * 100);
+      document.getElementById("waterCurrentText").textContent = waterMl;
+      document.getElementById("waterTargetText").textContent = waterTarget;
+      document.getElementById("waterPercentBadge").textContent = `%${waterPct}`;
+      document.getElementById("waterProgressBar").style.width = `${Math.min(100, waterPct)}%`;
+
+      // Render Meal Cards
+      const mealNames = ["Kahvaltı", "Öğle Yemeği", "Akşam Yemeği", "Ara Öğün"];
+      const mealIcons = {
+        "Kahvaltı": "☀️",
+        "Öğle Yemeği": "🍲",
+        "Akşam Yemeği": "🌙",
+        "Ara Öğün": "🍏"
+      };
+
+      const mealsContainer = document.getElementById("mealsContainer");
+      mealsContainer.innerHTML = mealNames.map(meal => {
+        const items = dayData.meals[meal] || [];
+        const mealKcal = items.reduce((sum, i) => sum + i.kcal, 0);
+
+        const itemsHtml = items.length === 0
+          ? `<p class="text-xs text-slate-400 py-2">Henüz yiyecek eklenmedi.</p>`
+          : items.map((item, idx) => `
+              <div class="flex items-center justify-between py-2 border-t border-slate-100 dark:border-oled-border/70 text-xs">
+                <div class="pr-2">
+                  <p class="font-bold text-slate-800 dark:text-slate-100">${escapeHtml(item.name)}</p>
+                  <p class="text-[11px] text-slate-400">
+                    ${item.brand ? escapeHtml(item.brand) + " • " : ""}${Math.round(item.grams)}g ${item.volumeCm3 ? `(${Math.round(item.volumeCm3)} cm³)` : ""} • K:${Math.round(item.carb)}g P:${Math.round(item.prot)}g Y:${Math.round(item.fat)}g
+                  </p>
+                </div>
+                <div class="flex items-center gap-2.5 shrink-0">
+                  <span class="font-extrabold text-emerald-500">${Math.round(item.kcal)} kcal</span>
+                  <button onclick="removeMealItem('${meal}', ${idx})" class="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 active:scale-90 transition" aria-label="Sil">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  </button>
+                </div>
+              </div>
+            `).join("");
+
+        return `
+          <div class="rounded-3xl bg-white dark:bg-oled-card border border-slate-200/80 dark:border-oled-border p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-2.5">
+                <span class="text-lg">${mealIcons[meal]}</span>
+                <div>
+                  <h3 class="text-sm font-extrabold">${meal}</h3>
+                  <span class="text-xs font-bold text-emerald-500">${Math.round(mealKcal)} kcal</span>
+                </div>
+              </div>
+              <button onclick="quickAddForMeal('${meal}')" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-oled-elevated hover:bg-emerald-500 hover:text-white text-xs font-bold transition active:scale-95">
+                + Ekle
+              </button>
+            </div>
+            <div>${itemsHtml}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function addWater(amount) {
+      ensureDayLog(appState.selectedDate);
+      const current = appState.logs[appState.selectedDate].water || 0;
+      appState.logs[appState.selectedDate].water = Math.max(0, current + amount);
+      saveState();
+      renderDashboard();
+      if (amount > 0) showToast(`+${amount} ml su eklendi 💧`);
+    }
+
+    function removeMealItem(mealName, index) {
+      ensureDayLog(appState.selectedDate);
+      appState.logs[appState.selectedDate].meals[mealName].splice(index, 1);
+      saveState();
+      renderDashboard();
+      showToast("Kayıt silindi");
+    }
+
+    function quickAddForMeal(mealName) {
+      document.getElementById("modalMealSelect").value = mealName;
+      switchTab("database");
+    }
+
+    // =========================================================================
+    // 6. VIRTUAL PLATE CALIBRATION & GEMINI VISION AI SCANNER
+    // =========================================================================
+    function selectPlateType(id, diameterCm, label) {
+      selectedPlate = { id, diameterCm, label };
+
+      // Update active button styling
+      document.querySelectorAll(".plate-btn").forEach(btn => {
+        const isSelected = btn.getAttribute("data-plate") === id;
+        const titleEl = btn.querySelector("div:first-child");
+        const baseTitle = titleEl.textContent.replace(" ✓", "");
+        if (isSelected) {
+          btn.className = "plate-btn p-2.5 rounded-2xl border text-left transition border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+          titleEl.textContent = baseTitle + " ✓";
+        } else {
+          btn.className = "plate-btn p-2.5 rounded-2xl border text-left transition border-slate-200 dark:border-oled-border bg-slate-50 dark:bg-oled-elevated";
+          titleEl.textContent = baseTitle;
+        }
+      });
+
+      // Adjust Virtual Ring visual size & label
+      const ring = document.getElementById("virtualPlateRing");
+      const sizeMap = { small: "56%", standard: "68%", large: "78%", bowl: "50%" };
+      ring.style.width = sizeMap[id] || "68%";
+      document.getElementById("ringLabelTop").textContent = `${baseNameForPlate(id)} • ${diameterCm} cm`;
+      recalcOfflinePortion();
+    }
+
+    function baseNameForPlate(id) {
+      const names = { small: "Küçük Tabak", standard: "Standart Tabak", large: "Büyük Tabak", bowl: "Çorba Kasesi" };
+      return names[id] || "Standart Tabak";
+    }
+
+    async function startLiveCamera() {
+      const videoEl = document.getElementById("cameraVideo");
+      const imgEl = document.getElementById("capturedImagePreview");
+      const placeholder = document.getElementById("cameraPlaceholder");
+      const btnCapture = document.getElementById("btnCaptureFrame");
+      const btnText = document.getElementById("btnCameraText");
+
+      if (cameraStream) {
+        stopLiveCamera();
+        return;
+      }
+
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 960 } },
+          audio: false
+        });
+        videoEl.srcObject = cameraStream;
+        videoEl.classList.remove("hidden");
+        imgEl.classList.add("hidden");
+        placeholder.classList.add("hidden");
+        btnCapture.classList.remove("hidden");
+        document.getElementById("btnReAnalyze").classList.add("hidden");
+        btnText.textContent = "Kamerayı Kapat";
+      } catch (err) {
+        showToast("Canlı kamera izni alınamadı, 'Fotoğraf Çek / Seç' kullanın.");
+      }
+    }
+
+    function stopLiveCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+      document.getElementById("cameraVideo").classList.add("hidden");
+      document.getElementById("btnCaptureFrame").classList.add("hidden");
+      document.getElementById("btnCameraText").textContent = "Canlı Kamera Aç";
+      if (!currentCapturedBase64) {
+        document.getElementById("cameraPlaceholder").classList.remove("hidden");
+      }
+    }
+
+    function captureFromVideo() {
+      const videoEl = document.getElementById("cameraVideo");
+      const canvas = document.getElementById("captureCanvas");
+      const imgEl = document.getElementById("capturedImagePreview");
+
+      if (!videoEl.videoWidth) return;
+
+      // Resize down slightly to keep payload fast on mobile networks
+      const maxDim = 1024;
+      let w = videoEl.videoWidth;
+      let h = videoEl.videoHeight;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+        else { w = Math.round((w * maxDim) / h); h = maxDim; }
+      }
+
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(videoEl, 0, 0, w, h);
+
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      currentCapturedBase64 = dataUrl.split(",")[1];
+
+      imgEl.src = dataUrl;
+      imgEl.classList.remove("hidden");
+      stopLiveCamera();
+      document.getElementById("btnReAnalyze").classList.remove("hidden");
+
+      analyzeCurrentImage();
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.getElementById("captureCanvas");
+          const maxDim = 1024;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+            else { w = Math.round((w * maxDim) / h); h = maxDim; }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          currentCapturedBase64 = dataUrl.split(",")[1];
+
+          const imgEl = document.getElementById("capturedImagePreview");
+          imgEl.src = dataUrl;
+          imgEl.classList.remove("hidden");
+          document.getElementById("cameraPlaceholder").classList.add("hidden");
+          stopLiveCamera();
+          document.getElementById("btnReAnalyze").classList.remove("hidden");
+
+          analyzeCurrentImage();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function analyzeCurrentImage() {
+      if (!currentCapturedBase64) {
+        showToast("Önce bir tabak fotoğrafı çekin veya seçin.");
+        return;
+      }
+
+      if (!navigator.onLine) {
+        showToast("Çevrimdışı moddasınız. Aşağıdaki görsel porsiyon hesaplayıcıyı kullanın.");
+        return;
+      }
+
+      const overlay = document.getElementById("aiScanningOverlay");
+      overlay.classList.remove("hidden");
+
+      const promptText = `
+        Sen uzman bir Türk diyetisyen ve bilgisayarla görü (hacim analiz) sistemisin.
+        Bu fotoğraftaki tabak/kase çapı kullanıcı tarafından "${selectedPlate.label}" (Çap: ${selectedPlate.diameterCm} cm) olarak kalibre edilmiştir.
+        Lütfen fotoğraftaki TÜM farklı yemekleri ve yan ürünleri tek tek ayırt et (örneğin aynı tabaktaki pilav, tavuk, salata, ekmek, sos vb. ayrı öğeler olarak listele).
+        Seçilen ${selectedPlate.diameterCm} cm çapındaki tabağın geometrik ölçeğini referans alarak her yemeğin:
+        1. Türkçe adını (name)
+        2. Tahmini hacmini santimetreküp cinsinden (volumeCm3)
+        3. Özkütlesini g/cm³ cinsinden (density, örn. pilav ~0.85, et ~1.02, salata ~0.45, çorba ~1.02)
+        4. Hesaplanan net ağırlığını gram cinsinden (grams = volumeCm3 * density)
+        5. Bu gramaja karşılık gelen toplam kalorisini (kcal), karbonhidratını (carb), proteinini (prot) ve yağını (fat) hesapla.
+      `;
+
+      const payload = {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: promptText },
+              {
+                inlineData: {
+                  mimeType: "image/jpeg",
+                  data: currentCapturedBase64
+                }
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              items: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    name: { type: "STRING" },
+                    volumeCm3: { type: "NUMBER" },
+                    density: { type: "NUMBER" },
+                    grams: { type: "NUMBER" },
+                    kcal: { type: "NUMBER" },
+                    carb: { type: "NUMBER" },
+                    prot: { type: "NUMBER" },
+                    fat: { type: "NUMBER" }
+                  },
+                  required: ["name", "volumeCm3", "density", "grams", "kcal", "carb", "prot", "fat"]
+                }
+              }
+            },
+            required: ["items"]
+          }
+        }
+      };
+
+      const apiKey = (appState.geminiApiKey || "").trim();
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      try {
+        const result = await fetchWithExponentialBackoff(apiUrl, payload);
+        const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawText) throw new Error("Boş yanıt");
+
+        const parsed = JSON.parse(rawText);
+        if (!parsed.items || parsed.items.length === 0) {
+          showToast("Fotoğrafta yemek tespit edilemedi, tekrar deneyin.");
+          overlay.classList.add("hidden");
+          return;
+        }
+
+        // Store per-gram ratios so slider updates nutrition proportionally in real time
+        detectedAIFoods = parsed.items.map(item => {
+          const g = Math.max(5, Math.round(item.grams || 100));
+          const density = item.density || 0.95;
+          return {
+            name: item.name,
+            density: density,
+            grams: g,
+            volumeCm3: Math.round(item.volumeCm3 || g / density),
+            kcalPerGram: (item.kcal || 0) / g,
+            carbPerGram: (item.carb || 0) / g,
+            protPerGram: (item.prot || 0) / g,
+            fatPerGram: (item.fat || 0) / g
+          };
+        });
+
+        renderDetectedAIFoods();
+        showToast(`${detectedAIFoods.length} yemek tespit edildi!`);
+      } catch (err) {
+        showToast("AI analizi sırasında bağlantı sorunu oluştu. Çevrimdışı hesaplayıcıyı kullanabilirsiniz.");
+      } finally {
+        overlay.classList.add("hidden");
+      }
+    }
+
+    async function fetchWithExponentialBackoff(url, payload, maxRetries = 4) {
+      let delay = 1000;
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return await response.json();
+        } catch (err) {
+          if (attempt === maxRetries) throw err;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2;
+        }
+      }
+    }
+
+    function renderDetectedAIFoods() {
+      const section = document.getElementById("aiResultsSection");
+      const list = document.getElementById("detectedItemsList");
+
+      if (detectedAIFoods.length === 0) {
+        section.classList.add("hidden");
+        return;
+      }
+
+      section.classList.remove("hidden");
+      let totalKcal = 0;
+
+      list.innerHTML = detectedAIFoods.map((item, idx) => {
+        const kcal = Math.round(item.kcalPerGram * item.grams);
+        const carb = (item.carbPerGram * item.grams).toFixed(1);
+        const prot = (item.protPerGram * item.grams).toFixed(1);
+        const fat = (item.fatPerGram * item.grams).toFixed(1);
+        const vol = Math.round(item.grams / item.density);
+        totalKcal += kcal;
+
+        return `
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-oled-elevated border border-slate-200/70 dark:border-oled-border space-y-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h4 class="text-sm font-extrabold">${escapeHtml(item.name)}</h4>
+                <p class="text-[11px] text-slate-400">
+                  Hacim: <strong class="text-cyan-500">${vol} cm³</strong> (Özkütle: ${item.density} g/cm³)
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-extrabold text-emerald-500">${kcal} kcal</span>
+                <button onclick="removeDetectedFood(${idx})" class="p-1 rounded-lg bg-rose-500/15 text-rose-500" aria-label="Çıkar">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Interactive Gramaj Slider & +/- Buttons -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-slate-400 font-semibold">Porsiyon Ağırlığı:</span>
+                <div class="flex items-center gap-1.5">
+                  <button onclick="adjustDetectedGrams(${idx}, -10)" class="w-7 h-7 rounded-lg bg-white dark:bg-oled-card font-bold shadow-sm">-10</button>
+                  <span class="font-extrabold w-14 text-center">${item.grams} g</span>
+                  <button onclick="adjustDetectedGrams(${idx}, 10)" class="w-7 h-7 rounded-lg bg-white dark:bg-oled-card font-bold shadow-sm">+10</button>
+                </div>
+              </div>
+              <input type="range" min="10" max="800" step="5" value="${item.grams}"
+                oninput="updateDetectedGrams(${idx}, this.value)" class="w-full" />
+            </div>
+
+            <div class="flex justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/50 dark:border-oled-border">
+              <span class="text-sky-500">Karb: ${carb}g</span>
+              <span class="text-emerald-500">Protein: ${prot}g</span>
+              <span class="text-amber-500">Yağ: ${fat}g</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("aiTotalDetectedKcal").textContent = `${totalKcal} kcal`;
+      document.getElementById("aiPlateSummary").textContent = `${selectedPlate.label} ölçeğine göre hesaplandı`;
+    }
+
+    function updateDetectedGrams(idx, newVal) {
+      detectedAIFoods[idx].grams = Math.max(5, parseInt(newVal, 10) || 5);
+      renderDetectedAIFoods();
+    }
+
+    function adjustDetectedGrams(idx, delta) {
+      detectedAIFoods[idx].grams = Math.max(5, detectedAIFoods[idx].grams + delta);
+      renderDetectedAIFoods();
+    }
+
+    function removeDetectedFood(idx) {
+      detectedAIFoods.splice(idx, 1);
+      renderDetectedAIFoods();
+    }
+
+    function saveDetectedFoodsToLog() {
+      if (detectedAIFoods.length === 0) return;
+      const mealName = document.getElementById("aiTargetMealSelect").value;
+      ensureDayLog(appState.selectedDate);
+
+      detectedAIFoods.forEach(item => {
+        const g = item.grams;
+        appState.logs[appState.selectedDate].meals[mealName].push({
+          name: item.name,
+          brand: "AI Hacim Analizi",
+          grams: g,
+          volumeCm3: Math.round(g / item.density),
+          kcal: item.kcalPerGram * g,
+          carb: item.carbPerGram * g,
+          prot: item.protPerGram * g,
+          fat: item.fatPerGram * g
+        });
+      });
+
+      saveState();
+      detectedAIFoods = [];
+      renderDetectedAIFoods();
+      showToast(`${mealName} öğününe eklendi! 🎉`);
+      switchTab("dashboard");
+    }
+
+    // =========================================================================
+    // 7. OFFLINE MANUAL VISUAL PORTION CALCULATOR
+    // =========================================================================
+    function initOfflineCalculatorSelect() {
+      const sel = document.getElementById("offlineCalcFoodSelect");
+      const allFoods = getAllFoods();
+      sel.innerHTML = allFoods.map(f =>
+        `<option value="${f.id}">${escapeHtml(f.name)} (${escapeHtml(f.brand)})</option>`
+      ).join("");
+      recalcOfflinePortion();
+    }
+
+    function setOfflineFill(pct) {
+      offlineFillPct = pct;
+      document.querySelectorAll(".fill-btn").forEach(btn => {
+        const val = parseInt(btn.getAttribute("data-fill"), 10);
+        if (val === pct) {
+          btn.className = "fill-btn py-2 rounded-xl text-xs font-bold bg-emerald-500 text-white";
+        } else {
+          btn.className = "fill-btn py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-oled-elevated";
+        }
+      });
+      const labels = { 25: "%25 (Çeyrek Tabak)", 50: "%50 (Yarım Tabak)", 75: "%75 (Üç Çeyrek)", 100: "%100 (Tam Dolu)" };
+      document.getElementById("offlineFillLabel").textContent = labels[pct];
+      recalcOfflinePortion();
+    }
+
+    function recalcOfflinePortion() {
+      const foodId = document.getElementById("offlineCalcFoodSelect").value;
+      const food = getAllFoods().find(f => f.id === foodId) || getAllFoods()[0];
+      if (!food) return;
+
+      // Plate base capacity in cm³: Small(18cm)->280cm³, Standard(24cm)->440cm³, Large(28cm)->600cm³, Bowl(15cm)->320cm³
+      const plateVolMap = { small: 280, standard: 440, large: 600, bowl: 320 };
+      const maxVol = plateVolMap[selectedPlate.id] || 440;
+      const estVol = Math.round(maxVol * (offlineFillPct / 100));
+      const density = food.density || 0.92;
+      const estGrams = Math.round(estVol * density);
+      const estKcal = Math.round((food.kcal / 100) * estGrams);
+
+      document.getElementById("offlineCalcVolWeight").textContent = `${estVol} cm³ • ${estGrams} g`;
+      document.getElementById("offlineCalcKcal").textContent = `${estKcal} kcal`;
+    }
+
+    function addOfflineCalculatedFood() {
+      const foodId = document.getElementById("offlineCalcFoodSelect").value;
+      const food = getAllFoods().find(f => f.id === foodId);
+      if (!food) return;
+
+      const plateVolMap = { small: 280, standard: 440, large: 600, bowl: 320 };
+      const estVol = Math.round((plateVolMap[selectedPlate.id] || 440) * (offlineFillPct / 100));
+      const estGrams = Math.round(estVol * (food.density || 0.92));
+      const factor = estGrams / 100;
+
+      const mealName = document.getElementById("offlineMealSelect").value;
+      ensureDayLog(appState.selectedDate);
+      appState.logs[appState.selectedDate].meals[mealName].push({
+        name: food.name,
+        brand: food.brand,
+        grams: estGrams,
+        volumeCm3: estVol,
+        kcal: food.kcal * factor,
+        carb: food.carb * factor,
+        prot: food.prot * factor,
+        fat: food.fat * factor
+      });
+
+      saveState();
+      showToast(`${food.name} (${estGrams}g) eklendi!`);
+      switchTab("dashboard");
+    }
+
+    // =========================================================================
+    // 8. CATEGORIZED BRAND-BASED DATABASE & CUSTOM FOOD CREATION
+    // =========================================================================
+    function getAllFoods() {
+      return [...appState.customFoods, ...INITIAL_FOOD_DB];
+    }
+
+    function initCategoryUI() {
+      const pillsContainer = document.getElementById("categoryPillsContainer");
+      pillsContainer.innerHTML = FOOD_CATEGORIES.map(cat => {
+        const isActive = cat === selectedCategory;
+        return `
+          <button onclick="selectFoodCategory('${cat}')"
+            class="px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition ${
+              isActive
+                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                : "bg-white dark:bg-oled-card text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-oled-border"
+            }">
+            ${cat}
+          </button>
+        `;
+      }).join("");
+
+      // Populate custom food modal category dropdown
+      const cfCat = document.getElementById("cfCategory");
+      cfCat.innerHTML = FOOD_CATEGORIES.filter(c => c !== "Tümü")
+        .map(c => `<option value="${c}">${c}</option>`)
+        .join("");
+    }
+
+    function selectFoodCategory(cat) {
+      selectedCategory = cat;
+      initCategoryUI();
+      renderFoodDatabase();
+    }
+
+    function renderFoodDatabase() {
+      const query = (document.getElementById("foodSearchInput").value || "").toLowerCase().trim();
+      const all = getAllFoods();
+
+      const filtered = all.filter(item => {
+        const matchCat = selectedCategory === "Tümü" || item.category === selectedCategory;
+        const matchQuery = !query ||
+          item.name.toLowerCase().includes(query) ||
+          (item.brand && item.brand.toLowerCase().includes(query)) ||
+          item.category.toLowerCase().includes(query);
+        return matchCat && matchQuery;
+      });
+
+      document.getElementById("dbResultCount").textContent = `${filtered.length} ürün listeleniyor`;
+
+      const listEl = document.getElementById("foodDatabaseList");
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="rounded-3xl bg-white dark:bg-oled-card p-8 text-center border border-slate-200 dark:border-oled-border space-y-2">
+            <p class="text-sm font-bold">Aradığınız ürün bulunamadı</p>
+            <p class="text-xs text-slate-400">Sağ üstteki "+ Yeni Ürün" butonu ile kendi ürününüzü ekleyebilirsiniz.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(item => {
+        const portionKcal = Math.round((item.kcal / 100) * item.portionGrams);
+        return `
+          <div onclick="openFoodDetailModal('${item.id}')"
+            class="rounded-2xl bg-white dark:bg-oled-card border border-slate-200/80 dark:border-oled-border p-3.5 flex items-center justify-between gap-3 active:scale-[0.99] transition cursor-pointer">
+            <div class="space-y-1">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                  ${escapeHtml(item.brand || "Genel")}
+                </span>
+                <span class="text-[10px] text-slate-400 font-medium">${escapeHtml(item.category)}</span>
+              </div>
+              <h4 class="text-xs font-extrabold text-slate-900 dark:text-white leading-snug">${escapeHtml(item.name)}</h4>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                ${escapeHtml(item.portionName)} • K:${item.carb}g P:${item.prot}g Y:${item.fat}g (100g)
+              </p>
+            </div>
+            <div class="text-right shrink-0">
+              <span class="block text-sm font-extrabold text-emerald-500">${portionKcal} kcal</span>
+              <span class="text-[10px] text-slate-400">${item.kcal} kcal/100g</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Food Detail Modal Logic
+    function openFoodDetailModal(foodId) {
+      const food = getAllFoods().find(f => f.id === foodId);
+      if (!food) return;
+      currentModalFood = food;
+
+      document.getElementById("modalFoodBrand").textContent = food.brand || "Genel";
+      document.getElementById("modalFoodName").textContent = food.name;
+      document.getElementById("modalFoodCategory").textContent = food.category;
+
+      const presets = [
+        { label: food.portionName, grams: food.portionGrams },
+        { label: "100 g / ml", grams: 100 },
+        { label: "1 Yemek Kaşığı (15g)", grams: 15 },
+        { label: "1 Dilim / Adet (30g)", grams: 30 }
+      ];
+
+      document.getElementById("modalPortionPresets").innerHTML = presets.map((p, idx) => `
+        <button type="button" onclick="setModalGrams(${p.grams})"
+          class="p-2 rounded-xl text-left text-xs font-bold border transition ${
+            idx === 0
+              ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+              : "border-slate-200 dark:border-oled-border bg-slate-50 dark:bg-oled-elevated"
+          }">
+          ${escapeHtml(p.label)}
+        </button>
+      `).join("");
+
+      setModalGrams(food.portionGrams);
+      document.getElementById("foodDetailModal").classList.remove("hidden");
+    }
+
+    function closeFoodDetailModal() {
+      document.getElementById("foodDetailModal").classList.add("hidden");
+      currentModalFood = null;
+    }
+
+    function setModalGrams(g) {
+      document.getElementById("modalGramInput").value = g;
+      document.getElementById("modalGramSlider").value = Math.min(1000, g);
+      updateModalNutritionDisplay();
+    }
+
+    function syncSliderToInput() {
+      const val = document.getElementById("modalGramSlider").value;
+      document.getElementById("modalGramInput").value = val;
+      updateModalNutritionDisplay();
+    }
+
+    function adjustModalGrams(delta) {
+      const inp = document.getElementById("modalGramInput");
+      const next = Math.max(1, (parseFloat(inp.value) || 0) + delta);
+      setModalGrams(next);
+    }
+
+    function updateModalNutritionDisplay() {
+      if (!currentModalFood) return;
+      const grams = Math.max(0, parseFloat(document.getElementById("modalGramInput").value) || 0);
+      const factor = grams / 100;
+
+      document.getElementById("modalCalcKcal").textContent = Math.round(currentModalFood.kcal * factor);
+      document.getElementById("modalCalcCarb").textContent = `${(currentModalFood.carb * factor).toFixed(1)}g`;
+      document.getElementById("modalCalcProt").textContent = `${(currentModalFood.prot * factor).toFixed(1)}g`;
+      document.getElementById("modalCalcFat").textContent = `${(currentModalFood.fat * factor).toFixed(1)}g`;
+    }
+
+    function confirmAddModalFood() {
+      if (!currentModalFood) return;
+      const foodName = currentModalFood.name;
+      const grams = Math.max(1, parseFloat(document.getElementById("modalGramInput").value) || 100);
+      const factor = grams / 100;
+      const mealName = document.getElementById("modalMealSelect").value;
+
+      ensureDayLog(appState.selectedDate);
+      appState.logs[appState.selectedDate].meals[mealName].push({
+        name: foodName,
+        brand: currentModalFood.brand,
+        grams: grams,
+        volumeCm3: Math.round(grams / (currentModalFood.density || 1.0)),
+        kcal: currentModalFood.kcal * factor,
+        carb: currentModalFood.carb * factor,
+        prot: currentModalFood.prot * factor,
+        fat: currentModalFood.fat * factor
+      });
+
+      saveState();
+      closeFoodDetailModal();
+      showToast(`${foodName} (${grams}g) eklendi!`);
+      switchTab("dashboard");
+    }
+
+    // Custom Food Creation Modal
+    function openCustomFoodModal() {
+      document.getElementById("customFoodModal").classList.remove("hidden");
+    }
+
+    function closeCustomFoodModal() {
+      document.getElementById("customFoodModal").classList.add("hidden");
+    }
+
+    function saveCustomFood() {
+      const name = document.getElementById("cfName").value.trim();
+      const brand = document.getElementById("cfBrand").value.trim() || "Özel Ürün";
+      const category = document.getElementById("cfCategory").value;
+      const portionGrams = Math.max(1, parseFloat(document.getElementById("cfPortionGrams").value) || 100);
+      const kcal = parseFloat(document.getElementById("cfKcal").value);
+      const carb = parseFloat(document.getElementById("cfCarb").value) || 0;
+      const prot = parseFloat(document.getElementById("cfProt").value) || 0;
+      const fat = parseFloat(document.getElementById("cfFat").value) || 0;
+
+      if (!name || isNaN(kcal)) {
+        showToast("Lütfen ürün adı ve kalori değerini girin.");
+        return;
+      }
+
+      const newFood = {
+        id: "custom_" + Date.now(),
+        name,
+        brand,
+        category,
+        portionName: `1 Porsiyon (${portionGrams}g)`,
+        portionGrams,
+        density: 0.95,
+        kcal,
+        carb,
+        prot,
+        fat
+      };
+
+      appState.customFoods.unshift(newFood);
+      saveState();
+      initOfflineCalculatorSelect();
+      renderFoodDatabase();
+      closeCustomFoodModal();
+
+      // Clear inputs
+      document.getElementById("cfName").value = "";
+      document.getElementById("cfBrand").value = "";
+      document.getElementById("cfKcal").value = "";
+      document.getElementById("cfCarb").value = "";
+      document.getElementById("cfProt").value = "";
+      document.getElementById("cfFat").value = "";
+
+      showToast(`"${name}" veritabanına eklendi!`);
+    }
+
+    // =========================================================================
+    // 9. STATISTICS CHARTS (CANVAS: 7-DAY BAR, MACRO DONUT, WEIGHT LINE)
+    // =========================================================================
+    function renderStatistics() {
+      drawWeeklyCalorieChart();
+      drawMacroDonutChart();
+      drawWeightChart();
+    }
+
+    function setupHiDPICanvas(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function drawWeeklyCalorieChart() {
+      const { ctx, w, h } = setupHiDPICanvas("weeklyCalorieCanvas");
+      const isDark = document.documentElement.classList.contains("dark");
+      const days = [];
+      let sumKcal = 0;
+
+      for (let i = -6; i <= 0; i++) {
+        const dateStr = getOffsetDateStr(i);
+        const log = appState.logs[dateStr];
+        let dayKcal = 0;
+        if (log) {
+          Object.values(log.meals).forEach(items => items.forEach(it => dayKcal += it.kcal));
+        }
+        sumKcal += dayKcal;
+        const dObj = new Date(dateStr + "T12:00:00");
+        const label = dObj.toLocaleDateString("tr-TR", { weekday: "short" });
+        days.push({ label, kcal: Math.round(dayKcal) });
+      }
+
+      document.getElementById("statsAvgKcal").textContent = `Ort: ${Math.round(sumKcal / 7)} kcal`;
+
+      const target = appState.targets.kcal;
+      const maxVal = Math.max(target * 1.2, ...days.map(d => d.kcal), 500);
+      const padBottom = 24;
+      const padTop = 16;
+      const chartH = h - padBottom - padTop;
+
+      // Target dashed line
+      const targetY = padTop + chartH * (1 - target / maxVal);
+      ctx.strokeStyle = "#10b981";
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(8, targetY);
+      ctx.lineTo(w - 8, targetY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const colW = (w - 16) / 7;
+      days.forEach((d, idx) => {
+        const barW = Math.min(26, colW * 0.55);
+        const barH = (d.kcal / maxVal) * chartH;
+        const x = 8 + idx * colW + (colW - barW) / 2;
+        const y = padTop + chartH - barH;
+
+        ctx.fillStyle = d.kcal > target ? "#f43f5e" : "#10b981";
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, Math.max(4, barH), 6);
+        ctx.fill();
+
+        ctx.fillStyle = isDark ? "#94a3b8" : "#64748b";
+        ctx.font = "600 10px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(d.label, x + barW / 2, h - 6);
+      });
+    }
+
+    function drawMacroDonutChart() {
+      const { ctx, w, h } = setupHiDPICanvas("macroDonutCanvas");
+      const dayData = appState.logs[appState.selectedDate];
+      let c = 0, p = 0, f = 0;
+      if (dayData) {
+        Object.values(dayData.meals).forEach(items => items.forEach(it => {
+          c += it.carb; p += it.prot; f += it.fat;
+        }));
+      }
+
+      const cKcal = c * 4, pKcal = p * 4, fKcal = f * 9;
+      const total = cKcal + pKcal + fKcal;
+
+      const cPct = total ? Math.round((cKcal / total) * 100) : 0;
+      const pPct = total ? Math.round((pKcal / total) * 100) : 0;
+      const fPct = total ? Math.max(0, 100 - cPct - pPct) : 0;
+
+      document.getElementById("statCarbPct").textContent = `%${cPct} (${Math.round(c)}g)`;
+      document.getElementById("statProtPct").textContent = `%${pPct} (${Math.round(p)}g)`;
+      document.getElementById("statFatPct").textContent = `%${fPct} (${Math.round(f)}g)`;
+
+      const cx = w / 2, cy = h / 2, r = Math.min(cx, cy) - 8;
+      ctx.lineWidth = 14;
+
+      if (total === 0) {
+        ctx.strokeStyle = "#334155";
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+        return;
+      }
+
+      const slices = [
+        { val: cKcal, color: "#0ea5e9" },
+        { val: pKcal, color: "#10b981" },
+        { val: fKcal, color: "#f59e0b" }
+      ];
+
+      let startAngle = -Math.PI / 2;
+      slices.forEach(s => {
+        if (s.val <= 0) return;
+        const sliceAngle = (s.val / total) * Math.PI * 2;
+        ctx.strokeStyle = s.color;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, startAngle, startAngle + sliceAngle);
+        ctx.stroke();
+        startAngle += sliceAngle;
+      });
+    }
+
+    function logNewWeight() {
+      const val = parseFloat(document.getElementById("newWeightInput").value);
+      if (isNaN(val) || val < 30 || val > 300) {
+        showToast("Geçerli bir kilo değeri girin.");
+        return;
+      }
+      const today = getTodayDateStr();
+      const existingIdx = appState.weightHistory.findIndex(w => w.date === today);
+      if (existingIdx >= 0) appState.weightHistory[existingIdx].weight = val;
+      else appState.weightHistory.push({ date: today, weight: val });
+
+      appState.profile.weight = val;
+      document.getElementById("profWeight").value = val;
+      document.getElementById("newWeightInput").value = "";
+      saveState();
+      drawWeightChart();
+      showToast(`Güncel kilo (${val} kg) kaydedildi!`);
+    }
+
+    function drawWeightChart() {
+      const { ctx, w, h } = setupHiDPICanvas("weightChartCanvas");
+      const isDark = document.documentElement.classList.contains("dark");
+      const history = appState.weightHistory.slice(-7);
+      if (history.length === 0) return;
+
+      const latest = history[history.length - 1].weight;
+      document.getElementById("statsCurrentWeight").textContent = `${latest.toFixed(1)} kg`;
+
+      const weights = history.map(x => x.weight);
+      const minW = Math.min(...weights) - 1.5;
+      const maxW = Math.max(...weights) + 1.5;
+      const padX = 22, padY = 20;
+      const plotW = w - padX * 2;
+      const plotH = h - padY * 2;
+
+      ctx.strokeStyle = "#10b981";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+
+      history.forEach((pt, i) => {
+        const x = padX + (history.length === 1 ? plotW / 2 : (i / (history.length - 1)) * plotW);
+        const y = padY + plotH * (1 - (pt.weight - minW) / Math.max(0.5, maxW - minW));
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      history.forEach((pt, i) => {
+        const x = padX + (history.length === 1 ? plotW / 2 : (i / (history.length - 1)) * plotW);
+        const y = padY + plotH * (1 - (pt.weight - minW) / Math.max(0.5, maxW - minW));
+
+        ctx.fillStyle = "#10b981";
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = isDark ? "#e2e8f0" : "#1e293b";
+        ctx.font = "700 10px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(pt.weight.toFixed(1), x, y - 8);
+      });
+    }
+
+    // =========================================================================
+    // 10. PROFILE, MIFFLIN-ST JEOR CALCULATOR, THEME & JSON BACKUP
+    // =========================================================================
+    function populateProfileInputs() {
+      const p = appState.profile;
+      document.getElementById("profGender").value = p.gender;
+      document.getElementById("profAge").value = p.age;
+      document.getElementById("profHeight").value = p.height;
+      document.getElementById("profWeight").value = p.weight;
+      document.getElementById("profActivity").value = p.activity;
+      document.getElementById("profGoal").value = p.goal;
+      document.getElementById("manualKcalInput").value = appState.targets.kcal;
+      document.getElementById("manualWaterInput").value = appState.targets.water;
+      const keyInp = document.getElementById("geminiApiKeyInput");
+      if (keyInp) keyInp.value = appState.geminiApiKey || "";
+    }
+
+    function saveGeminiApiKey() {
+      const val = (document.getElementById("geminiApiKeyInput").value || "").trim();
+      appState.geminiApiKey = val;
+      saveState();
+      showToast(val ? "Gemini API anahtarı kaydedildi!" : "API anahtarı temizlendi.");
+    }
+
+    function openPrivacyModal() {
+      document.getElementById("privacyModal").classList.remove("hidden");
+    }
+
+    function closePrivacyModal() {
+      document.getElementById("privacyModal").classList.add("hidden");
+    }
+
+    function openDeleteDataModal() {
+      document.getElementById("deleteDataModal").classList.remove("hidden");
+    }
+
+    function closeDeleteDataModal() {
+      document.getElementById("deleteDataModal").classList.add("hidden");
+    }
+
+    function confirmDeleteAllData() {
+      localStorage.removeItem(STORAGE_KEY);
+      closeDeleteDataModal();
+      showToast("Tüm veriler silindi, uygulama sıfırlanıyor...");
+      setTimeout(() => location.reload(), 800);
+    }
+
+    function calculateAndSaveGoals() {
+      const gender = document.getElementById("profGender").value;
+      const age = parseFloat(document.getElementById("profAge").value) || 30;
+      const height = parseFloat(document.getElementById("profHeight").value) || 175;
+      const weight = parseFloat(document.getElementById("profWeight").value) || 75;
+      const activity = parseFloat(document.getElementById("profActivity").value) || 1.55;
+      const goal = document.getElementById("profGoal").value;
+
+      // Mifflin-St Jeor Equation
+      let bmr = 10 * weight + 6.25 * height - 5 * age + (gender === "male" ? 5 : -161);
+      let tdee = bmr * activity;
+
+      if (goal === "lose") tdee -= 450;
+      if (goal === "gain") tdee += 350;
+
+      const targetKcal = Math.max(1200, Math.round(tdee));
+      // Macro distribution: 45% Carb, 28% Protein, 27% Fat
+      const targetCarb = Math.round((targetKcal * 0.45) / 4);
+      const targetProt = Math.round((targetKcal * 0.28) / 4);
+      const targetFat = Math.round((targetKcal * 0.27) / 9);
+      const targetWater = Math.round(weight * 33);
+
+      appState.profile = { gender, age, height, weight, activity, goal };
+      appState.targets = { kcal: targetKcal, carb: targetCarb, prot: targetProt, fat: targetFat, water: targetWater };
+
+      populateProfileInputs();
+      saveState();
+      renderDashboard();
+      showToast(`Yeni hedefiniz: ${targetKcal} kcal olarak güncellendi!`);
+    }
+
+    function saveManualTargets() {
+      const kcal = parseInt(document.getElementById("manualKcalInput").value, 10);
+      const water = parseInt(document.getElementById("manualWaterInput").value, 10);
+      if (kcal >= 1000) {
+        appState.targets.kcal = kcal;
+        appState.targets.carb = Math.round((kcal * 0.45) / 4);
+        appState.targets.prot = Math.round((kcal * 0.28) / 4);
+        appState.targets.fat = Math.round((kcal * 0.27) / 9);
+      }
+      if (water >= 500) {
+        appState.targets.water = water;
+      }
+      saveState();
+      renderDashboard();
+      showToast("Manuel hedefler kaydedildi!");
+    }
+
+    function applyTheme(theme) {
+      const html = document.documentElement;
+      const btn = document.getElementById("themeToggleBtn");
+      if (theme === "dark") {
+        html.classList.add("dark");
+        if (btn) btn.textContent = "Koyu Mod Aktif";
+      } else {
+        html.classList.remove("dark");
+        if (btn) btn.textContent = "Açık Mod Aktif";
+      }
+    }
+
+    function toggleTheme() {
+      appState.theme = appState.theme === "dark" ? "light" : "dark";
+      applyTheme(appState.theme);
+      saveState();
+    }
+
+    function exportBackupJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+      const a = document.createElement("a");
+      a.setAttribute("href", dataStr);
+      a.setAttribute("download", `NutriVision_TR_Yedek_${getTodayDateStr()}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast("JSON yedeği indirildi");
+    }
+
+    function importBackupJSON(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (imported && imported.targets && imported.logs) {
+            appState = imported;
+            saveState();
+            applyTheme(appState.theme || "dark");
+            populateProfileInputs();
+            initOfflineCalculatorSelect();
+            renderAll();
+            showToast("Yedek başarıyla geri yüklendi!");
+          } else {
+            showToast("Geçersiz yedek dosyası.");
+          }
+        } catch (err) {
+          showToast("Dosya okunamadı.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+  </script>
+</body>
+</html>

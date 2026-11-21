@@ -4,7 +4,7 @@ workflows:
     max_build_duration: 30
     instance_type: mac_mini_m2
     environment:
-      node: 20
+      node: 22
       xcode: latest
       cocoapods: default
     scripts:
@@ -15,9 +15,14 @@ workflows:
       - name: İmzasız IPA Oluştur (Sideloadly Uyumlu)
         script: |
           cd ios/App
-          xcodebuild -project App.xcodeproj -scheme App -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+          if [ -f "Podfile" ]; then
+            pod install
+            xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO CONFIGURATION_BUILD_DIR="$PWD/build" build
+          else
+            xcodebuild -project App.xcodeproj -scheme App -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO CONFIGURATION_BUILD_DIR="$PWD/build" build
+          fi
           mkdir -p Payload
-          cp -r build/Release-iphoneos/App.app Payload/
+          cp -r build/App.app Payload/
           zip -r NutriVisionTR.ipa Payload
     artifacts:
       - ios/App/NutriVisionTR.ipa

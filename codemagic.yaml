@@ -8,6 +8,12 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
+      - name: iOS Kamera ve Galeri İzinlerini Ekle
+        script: |
+          PLIST="ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'Yemeklerin hacmini ve kalorisini hesaplamak için kamera erişimi gereklidir.'" "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'Yemeklerin hacmini ve kalorisini hesaplamak için kamera erişimi gereklidir.'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'Yemek fotoğraflarını seçip analiz etmek için galeri erişimi gereklidir.'" "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'Yemek fotoğraflarını seçip analiz etmek için galeri erişimi gereklidir.'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string 'Çekilen yemek fotoğraflarını işlemek için izin gereklidir.'" "$PLIST" || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription 'Çekilen yemek fotoğraflarını işlemek için izin gereklidir.'" "$PLIST"
       - name: Bağımlılıkları Yükle ve iOS Senkronize Et
         script: |
           npm install
